@@ -1,0 +1,23 @@
+{
+    "[go]": {
+        "editor.insertSpaces": false,
+        "editor.formatOnSave": true,
+    },
+    "go.buildOnSave": "workspace",
+    "go.lintOnSave": "workspace",
+    "go.vetOnSave": "workspace",
+    "go.buildTags": "",
+    "go.buildFlags": [],
+    "go.lintTool": "golint",
+    "go.lintFlags": [],
+    "go.vetFlags": [],
+    "go.coverOnSave": false,
+    "go.useCodeSnippetsOnFunctionSuggest": false,
+    "go.formatTool": "goreturns",
+    "go.formatFlags": [],
+    "go.gopath": "neural-style-data-server",
+    "go.gocodeAutoBuild": false,
+    "go.goroot": "/usr/local/go",
+    "go.toolsGopath": "/Users/caoyuanle/Documents/gotools",
+}
+
