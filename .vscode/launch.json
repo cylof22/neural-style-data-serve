@@ -11,8 +11,8 @@
             "port": 2345,
             "host": "127.0.0.1",
             "program": "${fileDirname}",
-            "env": {"GOPATH": "/Users/caoyuanle/Documents/neural-style-server/neural-style-data-server/src/neural-style-data-server",
-                "GOROOT": "/usr/local/go"}
+            "env": {"GOPATH": "/Users/caoyuanle/Documents/neural-style-server/neural-style-data-server",
+                "GOROOT": "/usr/local/go"},
             "args": [],
             "showLog": true
         }

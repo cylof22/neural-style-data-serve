@@ -15,7 +15,7 @@
     "go.useCodeSnippetsOnFunctionSuggest": false,
     "go.formatTool": "goreturns",
     "go.formatFlags": [],
-    "go.gopath": "neural-style-data-server",
+    "go.gopath": "/Users/caoyuanle/Documents/neural-style-server/neural-style-data-server",
     "go.gocodeAutoBuild": false,
     "go.goroot": "/usr/local/go",
     "go.toolsGopath": "/Users/caoyuanle/Documents/gotools",
