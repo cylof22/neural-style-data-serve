@@ -25,8 +25,8 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 		httptransport.ServerErrorEncoder(encodeError),
 	}
 
-	//GET /styleTransfer /{content}/{style}/{output}/{iterations}
-	r.Methods("GET").Path("/styleTransfer/{content}/{style}/{output}/{iterations}").Handler(httptransport.NewServer(
+	//GET /styleTransfer/{content}/{style}/{output}/{iterations}
+	r.Methods("GET").Path("/styleTransfer").Queries("content", "{content}", "style", "{style}", "output", "{output}", "iterations", "{iterations:[0-9]+}").Handler(httptransport.NewServer(
 		endpoint.NeuralStyleEndpoint,
 		decodeNeuralStyleRequest,
 		encodeNeuralStyleResponse,
