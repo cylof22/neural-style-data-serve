@@ -2,6 +2,7 @@ package StyleService
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -43,16 +44,19 @@ func decodeNeuralStyleRequest(_ context.Context, r *http.Request) (interface{}, 
 	if !ok {
 		return nil, ErrBadRouting
 	}
+	contentPath, _ := base64.StdEncoding.DecodeString(content)
 
 	style, ok := vars["style"]
 	if !ok {
 		return nil, ErrBadRouting
 	}
+	stylePath, _ := base64.StdEncoding.DecodeString(style)
 
 	output, ok := vars["output"]
 	if !ok {
 		return nil, ErrBadRouting
 	}
+	outputPath, _ := base64.StdEncoding.DecodeString(output)
 
 	iterations, ok := vars["iterations"]
 	if !ok {
@@ -62,9 +66,9 @@ func decodeNeuralStyleRequest(_ context.Context, r *http.Request) (interface{}, 
 	iterationTimes, _ := strconv.Atoi(iterations)
 
 	return NeuralStyleRequest{
-		Content:    content,
-		Style:      style,
-		Output:     output,
+		Content:    string(contentPath),
+		Style:      string(stylePath),
+		Output:     string(outputPath),
 		Iterations: iterationTimes,
 	}, nil
 }
