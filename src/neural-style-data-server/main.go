@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,12 +14,20 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+var serverURL = flag.String("host", "", "neural style server url")
+var serverPort = flag.String("port", "9090", "neural style server port")
+var networkPath = flag.String("network", "", "neural network model path")
+
 func main() {
+	flag.Parse()
+
 	ctx := context.Background()
 	errChan := make(chan error)
 
 	var svc StyleService.Service
-	svc = StyleService.NeuralTransferService{}
+	svc = StyleService.NeuralTransferService{
+		NetworkPath: *networkPath,
+	}
 
 	endpoint := StyleService.Endpoints{
 		NeuralStyleEndpoint: StyleService.MakeNeuralStyleEndpoint(svc),
@@ -38,7 +47,7 @@ func main() {
 	go func() {
 		fmt.Println("Starting server at port 9090")
 		handler := r
-		errChan <- http.ListenAndServe(":9090", handler)
+		errChan <- http.ListenAndServe(*serverPort+":"+*serverPort, handler)
 	}()
 
 	go func() {

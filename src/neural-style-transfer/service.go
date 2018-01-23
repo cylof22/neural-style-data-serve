@@ -16,10 +16,11 @@ type Service interface {
 
 // NeuralTransferService for final image style transfer
 type NeuralTransferService struct {
+	NetworkPath string
 }
 
 // StyleTransfer for applying the style image to the content image, and generated it as output image
-func (NeuralTransferService) StyleTransfer(content, style, output string, iterations int) error {
+func (svc NeuralTransferService) StyleTransfer(content, style, output string, iterations int) error {
 	python, err := exec.LookPath("python")
 	if err != nil {
 		return errors.New("No path installed")
@@ -29,11 +30,12 @@ func (NeuralTransferService) StyleTransfer(content, style, output string, iterat
 	styleEnv := "styles=" + style
 	outputEnv := "output=" + output
 	iterationsEnv := "iterations=" + strconv.Itoa(iterations)
+	networkPathEnv := "network=" + svc.NetworkPath + "imagenet-vgg-verydeep-19.mat"
 
 	wd, _ := os.Getwd()
 	pyfiles := wd + "/neural_style.py"
 	cmd := exec.Command(python, pyfiles)
-	cmd.Env = []string{targetEnv, styleEnv, outputEnv, iterationsEnv}
+	cmd.Env = []string{targetEnv, styleEnv, outputEnv, iterationsEnv, networkPathEnv}
 
 	var out bytes.Buffer
 	var stderr bytes.Buffer
