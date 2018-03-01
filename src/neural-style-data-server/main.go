@@ -14,7 +14,7 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-var serverURL = flag.String("host", "", "neural style server url")
+var serverURL = flag.String("host", "localhost", "neural style server url")
 var serverPort = flag.String("port", "9090", "neural style server port")
 var networkPath = flag.String("network", "", "neural network model path")
 
@@ -47,7 +47,7 @@ func main() {
 	go func() {
 		fmt.Println("Starting server at port 9090")
 		handler := r
-		errChan <- http.ListenAndServe(*serverPort+":"+*serverPort, handler)
+		errChan <- http.ListenAndServe(*serverURL+":"+*serverPort, handler)
 	}()
 
 	go func() {
