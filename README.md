@@ -5,13 +5,13 @@
    (1) Install dependent libraries
    		cd source-code-folder
 			
-   		go get github.com/go-kit
+   		go get github.com/go-kit/kit
 			
 		go get github.com/gorilla/mux
 			
-		go get github.com/go-logfmt
+		go get github.com/go-logfmt/logfmt
 			
-		go get github.com/go-stack
+		go get github.com/go-stack/stack
 			
 	 (2) Define the local GOPATH environment for the go build
 	 
