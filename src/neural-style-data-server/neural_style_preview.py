@@ -2,11 +2,11 @@ import os
 from argparse import ArgumentParser
 from keras import backend as K
 import numpy as np
+from vgg19model import VGG19Model
 from keras.applications import vgg19
 from keras.preprocessing.image import load_img, img_to_array
-
 from scipy.optimize import fmin_l_bfgs_b
-from scipy.misc import imsave
+from PIL import Image
 
 # default content, style weights, and the convergence error
 # need to be added to the registered environment variables
@@ -14,7 +14,7 @@ content_weight = 0.025
 style_weight = 1.0
 total_variation_weight = 1e-4
 source_paper = 'gatys'
-iterations = 1
+iterations = 3
 
 def getPreviewEnvs():
     content = os.environ["content"]
@@ -31,6 +31,7 @@ def preprocess_image(image_path, height=None, width=None):
     img = vgg19.preprocess_input(img)
     return img
 
+# The Mean pixel should be computed dynamically
 def deprocess_image(x):
     # Remove zero-center by mean pixel
     x[:, :, 0] += 103.939
@@ -108,7 +109,7 @@ class Evaluator(object):
         self.grad_values = None
         return grad_values
 
-def style_preview(content, style, output):
+def style_preview(content, style, output, cache_dir="."):
     width, height = load_img(content).size
     img_height = 320
     img_width = int(width * img_height / height)
@@ -123,9 +124,10 @@ def style_preview(content, style, output):
         style_image,generated_image], axis=0)
 
     # The preview network needs to download to the suitable location
-    model = vgg19.VGG19(input_tensor=input_tensor,
+    model = VGG19Model(input_tensor=input_tensor,
                     weights='imagenet',
-                    include_top=False)
+                    include_top=False,
+                    cache_dir=cache_dir)
     
     layers = dict([(layer.name, layer.output) for layer in model.layers])
 
@@ -174,7 +176,7 @@ def style_preview(content, style, output):
     
     img = x.copy().reshape((img_height, img_width, 3))
     img = deprocess_image(img)
-    imsave(output, img)
+    Image.fromarray(img).save(output, quality=95)
 
 def main():
     content, style, output = getPreviewEnvs()
