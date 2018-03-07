@@ -30,7 +30,8 @@ func main() {
 	}
 
 	endpoint := StyleService.Endpoints{
-		NeuralStyleEndpoint: StyleService.MakeNeuralStyleEndpoint(svc),
+		NeuralStyleEndpoint:        StyleService.MakeNeuralStyleEndpoint(svc),
+		NeuralStylePreviewEndpoint: StyleService.MakeNeuralStylePreviewEndpoint(svc),
 	}
 
 	// Logging domain.
