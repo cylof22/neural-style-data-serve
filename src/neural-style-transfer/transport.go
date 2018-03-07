@@ -34,32 +34,40 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 		options...,
 	))
 
+	//GET /styleTransferPreview/{content}/{style}/{output}
+	r.Methods("GET").Path("/styleTransferPreview").Queries("content", "{content}", "style", "{style}", "output", "{output}").Handler(httptransport.NewServer(
+		endpoint.NeuralStylePreviewEndpoint,
+		decodeNeuralStylePreviewRequest,
+		encodeNeuralStyleResponse,
+		options...,
+	))
 	return r
+}
+func decodeNeuralStylePreviewRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+
+	contentPath, stylePath, outputPath, ok := decodeNeuralStyleCommonParams(vars)
+	if ok != nil {
+		return nil, ok
+	}
+
+	return NeuralStylePreviewRequest{
+		Content: string(contentPath),
+		Style:   string(stylePath),
+		Output:  string(outputPath),
+	}, nil
 }
 
 func decodeNeuralStyleRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 
-	content, ok := vars["content"]
-	if !ok {
-		return nil, ErrBadRouting
+	contentPath, stylePath, outputPath, ok := decodeNeuralStyleCommonParams(vars)
+	if ok != nil {
+		return nil, ok
 	}
-	contentPath, _ := base64.StdEncoding.DecodeString(content)
 
-	style, ok := vars["style"]
-	if !ok {
-		return nil, ErrBadRouting
-	}
-	stylePath, _ := base64.StdEncoding.DecodeString(style)
-
-	output, ok := vars["output"]
-	if !ok {
-		return nil, ErrBadRouting
-	}
-	outputPath, _ := base64.StdEncoding.DecodeString(output)
-
-	iterations, ok := vars["iterations"]
-	if !ok {
+	iterations, isOk := vars["iterations"]
+	if !isOk {
 		return nil, ErrBadRouting
 	}
 
@@ -71,6 +79,28 @@ func decodeNeuralStyleRequest(_ context.Context, r *http.Request) (interface{}, 
 		Output:     string(outputPath),
 		Iterations: iterationTimes,
 	}, nil
+}
+
+func decodeNeuralStyleCommonParams(vars map[string]string) (string, string, string, error) {
+	content, ok := vars["content"]
+	if !ok {
+		return "", "", "", ErrBadRouting
+	}
+	contentPath, _ := base64.StdEncoding.DecodeString(content)
+
+	style, ok := vars["style"]
+	if !ok {
+		return "", "", "", ErrBadRouting
+	}
+	stylePath, _ := base64.StdEncoding.DecodeString(style)
+
+	output, ok := vars["output"]
+	if !ok {
+		return "", "", "", ErrBadRouting
+	}
+	outputPath, _ := base64.StdEncoding.DecodeString(output)
+
+	return string(contentPath), string(stylePath), string(outputPath), nil
 }
 
 type errorer interface {
