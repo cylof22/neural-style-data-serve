@@ -41,6 +41,18 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 		encodeNeuralStyleResponse,
 		options...,
 	))
+
+	// output file server
+	outputFiles := http.FileServer(http.Dir("data/outputs/"))
+	r.PathPrefix("/outputs/").Handler(http.StripPrefix("/outputs/", outputFiles))
+
+	// style file server
+	styleFiles := http.FileServer(http.Dir("data/styles/"))
+	r.PathPrefix("/styles/").Handler(http.StripPrefix("/styles", styleFiles))
+
+	// content file server
+	contentFiles := http.FileServer(http.Dir("data/contents"))
+	r.PathPrefix("/contents/").Handler(http.StripPrefix("/contents/", contentFiles))
 	return r
 }
 func decodeNeuralStylePreviewRequest(_ context.Context, r *http.Request) (interface{}, error) {
