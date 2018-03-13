@@ -17,6 +17,8 @@ import (
 var serverURL = flag.String("host", "localhost", "neural style server url")
 var serverPort = flag.String("port", "9090", "neural style server port")
 var networkPath = flag.String("network", "", "neural network model path")
+var previewNetworkPath = flag.String("previewNetwork", "", "neural network preview model path")
+var outputPath = flag.String("outputdir", "./data/outputs/", "neural style transfer output directory")
 
 func main() {
 	flag.Parse()
@@ -26,7 +28,9 @@ func main() {
 
 	var svc StyleService.Service
 	svc = StyleService.NeuralTransferService{
-		NetworkPath: *networkPath,
+		NetworkPath:        *networkPath,
+		PreviewNetworkPath: *previewNetworkPath,
+		OutputPath:         *outputPath,
 	}
 
 	endpoint := StyleService.Endpoints{

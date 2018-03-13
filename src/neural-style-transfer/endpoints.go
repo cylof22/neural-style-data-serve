@@ -10,7 +10,6 @@ import (
 type NeuralStyleRequest struct {
 	Content    string
 	Style      string
-	Output     string
 	Iterations int
 }
 
@@ -18,12 +17,12 @@ type NeuralStyleRequest struct {
 type NeuralStylePreviewRequest struct {
 	Content string
 	Style   string
-	Output  string
 }
 
 // NeuralStyleResponse error information for the style transfer
 type NeuralStyleResponse struct {
-	Err error `json:"err,omitempty"`
+	Err    error  `json:"err,omitempty"`
+	Output string `json:"omitempty"`
 }
 
 // Endpoints wrap the Neural Style Service
@@ -36,15 +35,16 @@ type Endpoints struct {
 func MakeNeuralStyleEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NeuralStyleRequest)
-		err := svc.StyleTransfer(req.Content, req.Style, req.Output, req.Iterations)
-		return NeuralStyleResponse{err}, err
+		output, err := svc.StyleTransfer(req.Content, req.Style, req.Iterations)
+		return NeuralStyleResponse{Err: err, Output: output}, err
 	}
 }
 
+// MakeNeuralStylePreviewEndpoint generate the style transfer preview endpoint
 func MakeNeuralStylePreviewEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NeuralStylePreviewRequest)
-		err := svc.StyleTransferPreview(req.Content, req.Style, req.Output)
-		return NeuralStyleResponse{err}, err
+		output, err := svc.StyleTransferPreview(req.Content, req.Style)
+		return NeuralStyleResponse{Err: err, Output: output}, err
 	}
 }

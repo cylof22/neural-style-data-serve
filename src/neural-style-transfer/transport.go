@@ -26,16 +26,16 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 		httptransport.ServerErrorEncoder(encodeError),
 	}
 
-	//GET /styleTransfer/{content}/{style}/{output}/{iterations}
-	r.Methods("GET").Path("/styleTransfer").Queries("content", "{content}", "style", "{style}", "output", "{output}", "iterations", "{iterations:[0-9]+}").Handler(httptransport.NewServer(
+	//GET /styleTransfer/{content}/{style}/{iterations}
+	r.Methods("GET").Path("/styleTransfer").Queries("content", "{content}", "style", "{style}", "iterations", "{iterations:[0-9]+}").Handler(httptransport.NewServer(
 		endpoint.NeuralStyleEndpoint,
 		decodeNeuralStyleRequest,
 		encodeNeuralStyleResponse,
 		options...,
 	))
 
-	//GET /styleTransferPreview/{content}/{style}/{output}
-	r.Methods("GET").Path("/styleTransferPreview").Queries("content", "{content}", "style", "{style}", "output", "{output}").Handler(httptransport.NewServer(
+	//GET /styleTransferPreview/{content}/{style}
+	r.Methods("GET").Path("/styleTransferPreview").Queries("content", "{content}", "style", "{style}").Handler(httptransport.NewServer(
 		endpoint.NeuralStylePreviewEndpoint,
 		decodeNeuralStylePreviewRequest,
 		encodeNeuralStyleResponse,
@@ -58,7 +58,7 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 func decodeNeuralStylePreviewRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 
-	contentPath, stylePath, outputPath, ok := decodeNeuralStyleCommonParams(vars)
+	contentPath, stylePath, ok := decodeNeuralStyleCommonParams(vars)
 	if ok != nil {
 		return nil, ok
 	}
@@ -66,14 +66,13 @@ func decodeNeuralStylePreviewRequest(_ context.Context, r *http.Request) (interf
 	return NeuralStylePreviewRequest{
 		Content: string(contentPath),
 		Style:   string(stylePath),
-		Output:  string(outputPath),
 	}, nil
 }
 
 func decodeNeuralStyleRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 
-	contentPath, stylePath, outputPath, ok := decodeNeuralStyleCommonParams(vars)
+	contentPath, stylePath, ok := decodeNeuralStyleCommonParams(vars)
 	if ok != nil {
 		return nil, ok
 	}
@@ -88,31 +87,24 @@ func decodeNeuralStyleRequest(_ context.Context, r *http.Request) (interface{}, 
 	return NeuralStyleRequest{
 		Content:    string(contentPath),
 		Style:      string(stylePath),
-		Output:     string(outputPath),
 		Iterations: iterationTimes,
 	}, nil
 }
 
-func decodeNeuralStyleCommonParams(vars map[string]string) (string, string, string, error) {
+func decodeNeuralStyleCommonParams(vars map[string]string) (string, string, error) {
 	content, ok := vars["content"]
 	if !ok {
-		return "", "", "", ErrBadRouting
+		return "", "", ErrBadRouting
 	}
 	contentPath, _ := base64.StdEncoding.DecodeString(content)
 
 	style, ok := vars["style"]
 	if !ok {
-		return "", "", "", ErrBadRouting
+		return "", "", ErrBadRouting
 	}
 	stylePath, _ := base64.StdEncoding.DecodeString(style)
 
-	output, ok := vars["output"]
-	if !ok {
-		return "", "", "", ErrBadRouting
-	}
-	outputPath, _ := base64.StdEncoding.DecodeString(output)
-
-	return string(contentPath), string(stylePath), string(outputPath), nil
+	return string(contentPath), string(stylePath), nil
 }
 
 type errorer interface {
