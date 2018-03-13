@@ -79,11 +79,14 @@ func (svc NeuralTransferService) StyleTransferPreview(content, style string) (st
 	targetEnv := "content=" + content
 	styleEnv := "styles=" + style
 
-	contentSepIndex := strings.LastIndex(content, ".")
-	styleSepIndex := strings.LastIndex(style, ".")
+	contentPathSepIndex := strings.LastIndex(content, "/")
+	contentExtSepIndex := strings.LastIndex(content, ".")
+	contentName := content[contentPathSepIndex+1 : contentExtSepIndex-1]
 
-	contentName := content[0 : contentSepIndex-1]
-	styleName := style[0 : styleSepIndex-1]
+	stylePathSepIndex := strings.LastIndex(style, "/")
+	styleExtSepIndex := strings.LastIndex(style, ".")
+	styleName := style[stylePathSepIndex+1 : styleExtSepIndex-1]
+
 	output := svc.OutputPath + contentName + "_" + styleName + "_" + "preview" + ".png"
 	outputEnv := "output=" + output
 
