@@ -2,10 +2,14 @@
 *.o
 *.a
 *.so
+*.pyc
+*.mat
+*.h5
 
 # Folders
 _obj
 _test
+bin/data
 
 # Architecture specific extensions/prefixes
 *.[568vq]
