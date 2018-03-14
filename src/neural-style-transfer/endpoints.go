@@ -21,8 +21,8 @@ type NeuralStylePreviewRequest struct {
 
 // NeuralStyleResponse error information for the style transfer
 type NeuralStyleResponse struct {
-	Err    error  `json:"err,omitempty"`
-	Output string `json:"omitempty"`
+	Err    error
+	Output string
 }
 
 // Endpoints wrap the Neural Style Service

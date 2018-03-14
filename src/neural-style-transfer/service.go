@@ -3,7 +3,6 @@ package StyleService
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -27,7 +26,7 @@ type NeuralTransferService struct {
 func (svc NeuralTransferService) StyleTransfer(content, style string, iterations int) (string, error) {
 	python, err := exec.LookPath("python")
 	if err != nil {
-		return "", errors.New("No path installed")
+		return "", errors.New("No python installed")
 	}
 
 	targetEnv := "content=" + content
@@ -35,13 +34,13 @@ func (svc NeuralTransferService) StyleTransfer(content, style string, iterations
 
 	contentPathSepIndex := strings.LastIndex(content, "/")
 	contentExtSepIndex := strings.LastIndex(content, ".")
-	contentName := content[contentPathSepIndex+1 : contentExtSepIndex-1]
+	contentName := content[contentPathSepIndex+1 : contentExtSepIndex]
 
 	stylePathSepIndex := strings.LastIndex(style, "/")
 	styleExtSepIndex := strings.LastIndex(style, ".")
-	styleName := style[stylePathSepIndex+1 : styleExtSepIndex-1]
+	styleName := style[stylePathSepIndex+1 : styleExtSepIndex]
 
-	output := svc.OutputPath + contentName + "_" + styleName + ".png"
+	output := svc.OutputPath + "data/outputs/" + contentName + "_" + styleName + ".png"
 	outputEnv := "output=" + output
 
 	iterationsEnv := "iterations=" + strconv.Itoa(iterations)
@@ -59,10 +58,6 @@ func (svc NeuralTransferService) StyleTransfer(content, style string, iterations
 
 	err = cmd.Run()
 
-	if err != nil {
-		return "", errors.New(fmt.Sprint(err) + ":" + stderr.String())
-	}
-
 	if _, err := os.Stat(output); os.IsNotExist(err) {
 		return "", errors.New("Style Transfer fails")
 	}
@@ -73,7 +68,7 @@ func (svc NeuralTransferService) StyleTransfer(content, style string, iterations
 func (svc NeuralTransferService) StyleTransferPreview(content, style string) (string, error) {
 	python, err := exec.LookPath("python")
 	if err != nil {
-		return "", errors.New("No path installed")
+		return "", errors.New("No python installed")
 	}
 
 	targetEnv := "content=" + content
@@ -81,13 +76,13 @@ func (svc NeuralTransferService) StyleTransferPreview(content, style string) (st
 
 	contentPathSepIndex := strings.LastIndex(content, "/")
 	contentExtSepIndex := strings.LastIndex(content, ".")
-	contentName := content[contentPathSepIndex+1 : contentExtSepIndex-1]
+	contentName := content[contentPathSepIndex+1 : contentExtSepIndex]
 
 	stylePathSepIndex := strings.LastIndex(style, "/")
 	styleExtSepIndex := strings.LastIndex(style, ".")
-	styleName := style[stylePathSepIndex+1 : styleExtSepIndex-1]
+	styleName := style[stylePathSepIndex+1 : styleExtSepIndex]
 
-	output := svc.OutputPath + contentName + "_" + styleName + "_" + "preview" + ".png"
+	output := svc.OutputPath + "data/outputs/" + contentName + "_" + styleName + "_" + "preview" + ".png"
 	outputEnv := "output=" + output
 
 	wd, _ := os.Getwd()
@@ -102,12 +97,8 @@ func (svc NeuralTransferService) StyleTransferPreview(content, style string) (st
 
 	err = cmd.Run()
 
-	if err != nil {
-		return "", errors.New(fmt.Sprint(err) + ":" + stderr.String())
-	}
-
 	if _, err := os.Stat(output); os.IsNotExist(err) {
-		return "", errors.New("Style Transfer fails")
+		return "", errors.New("Style Transfer Preview fails")
 	}
 
 	return output, nil
