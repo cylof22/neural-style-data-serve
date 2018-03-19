@@ -28,17 +28,33 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 
 	//GET /styleTransfer/{content}/{style}/{iterations}
 	r.Methods("GET").Path("/styleTransfer").Queries("content", "{content}", "style", "{style}", "iterations", "{iterations:[0-9]+}").Handler(httptransport.NewServer(
-		endpoint.NeuralStyleEndpoint,
-		decodeNeuralStyleRequest,
-		encodeNeuralStyleResponse,
+		endpoint.NSEndpoint,
+		decodeNSRequest,
+		encodeNSResponse,
 		options...,
 	))
 
 	//GET /styleTransferPreview/{content}/{style}
 	r.Methods("GET").Path("/styleTransferPreview").Queries("content", "{content}", "style", "{style}").Handler(httptransport.NewServer(
-		endpoint.NeuralStylePreviewEndpoint,
-		decodeNeuralStylePreviewRequest,
-		encodeNeuralStyleResponse,
+		endpoint.NSPreviewEndpoint,
+		decodeNSPreviewRequest,
+		encodeNSResponse,
+		options...,
+	))
+
+	// POST /styleTransfer/content
+	r.Methods("POST").Path("/styleTransfer/content/{filename}").Handler(httptransport.NewServer(
+		endpoint.NSContentUploadEndpoint,
+		decodeNSUploadContentRequest,
+		encodeNSUploadContentResponse,
+		options...,
+	))
+
+	// POST /styleTransfer/style
+	r.Methods("POST").Path("/styleTransfer/style/{filename}").Handler(httptransport.NewServer(
+		endpoint.NSStyleUploadEndpoint,
+		decodeNSUploadStyleRequest,
+		encodeNSUploadStyleResponse,
 		options...,
 	))
 
@@ -55,7 +71,8 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 	r.PathPrefix("/contents/").Handler(http.StripPrefix("/contents/", contentFiles))
 	return r
 }
-func decodeNeuralStylePreviewRequest(_ context.Context, r *http.Request) (interface{}, error) {
+
+func decodeNSPreviewRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 
 	contentPath, stylePath, ok := decodeNeuralStyleCommonParams(vars)
@@ -63,13 +80,13 @@ func decodeNeuralStylePreviewRequest(_ context.Context, r *http.Request) (interf
 		return nil, ok
 	}
 
-	return NeuralStylePreviewRequest{
+	return NSPreviewRequest{
 		Content: string(contentPath),
 		Style:   string(stylePath),
 	}, nil
 }
 
-func decodeNeuralStyleRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeNSRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 
 	contentPath, stylePath, ok := decodeNeuralStyleCommonParams(vars)
@@ -84,7 +101,7 @@ func decodeNeuralStyleRequest(_ context.Context, r *http.Request) (interface{}, 
 
 	iterationTimes, _ := strconv.Atoi(iterations)
 
-	return NeuralStyleRequest{
+	return NSRequest{
 		Content:    string(contentPath),
 		Style:      string(stylePath),
 		Iterations: iterationTimes,
@@ -107,11 +124,40 @@ func decodeNeuralStyleCommonParams(vars map[string]string) (string, string, erro
 	return string(contentPath), string(stylePath), nil
 }
 
+func decodeNSUploadContentRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+
+	fileName, ok := vars["filename"]
+	if !ok {
+		return "", ErrBadRouting
+	}
+
+	return NSUploadRequest{FileName: fileName}, nil
+}
+
+func encodeNSUploadContentResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	return nil
+}
+
+func decodeNSUploadStyleRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	fileName, ok := vars["filename"]
+	if !ok {
+		return "", ErrBadRouting
+	}
+
+	return NSUploadRequest{FileName: fileName}, nil
+}
+
+func encodeNSUploadStyleResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	return nil
+}
+
 type errorer interface {
 	error() error
 }
 
-func encodeNeuralStyleResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+func encodeNSResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	if e, ok := response.(errorer); ok && e.error() != nil {
 		// Not a gokit transport error, but a business logic error
 		// provide those as HTTP errors

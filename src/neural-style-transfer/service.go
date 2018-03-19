@@ -13,6 +13,8 @@ import (
 type Service interface {
 	StyleTransfer(content, style string, iterations int) (string, error)
 	StyleTransferPreview(content, style string) (string, error)
+	UploadContentFile(name string, image []byte) (string, error)
+	UploadStyleFile(name string, image []byte) (string, error)
 }
 
 // NeuralTransferService for final image style transfer
@@ -102,4 +104,14 @@ func (svc NeuralTransferService) StyleTransferPreview(content, style string) (st
 	}
 
 	return output, nil
+}
+
+// UploadContentFile upload content file to the cloud storage
+func (svc NeuralTransferService) UploadContentFile(name string, image []byte) (string, error) {
+	return "", nil
+}
+
+// UploadStyleFile upload style file to the cloud storage
+func (svc NeuralTransferService) UploadStyleFile(name string, image []byte) (string, error) {
+	return "", nil
 }
