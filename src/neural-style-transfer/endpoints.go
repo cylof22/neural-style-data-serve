@@ -2,6 +2,7 @@ package StyleService
 
 import (
 	"context"
+	"mime/multipart"
 
 	"github.com/go-kit/kit/endpoint"
 )
@@ -22,6 +23,7 @@ type NSPreviewRequest struct {
 // NSUploadRequest parameters for upload file
 type NSUploadRequest struct {
 	FileName string
+	ImgFile  multipart.File
 }
 
 // NSResponse error information for the style transfer
@@ -60,7 +62,7 @@ func MakeNSPreviewEndpoint(svc Service) endpoint.Endpoint {
 func MakeNSContentUploadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSUploadRequest)
-		output, err := svc.UploadContentFile(req.FileName, nil)
+		output, err := svc.UploadContentFile(req.FileName, req.ImgFile)
 		return NSResponse{Err: err, Output: output}, err
 	}
 }
@@ -69,7 +71,7 @@ func MakeNSContentUploadEndpoint(svc Service) endpoint.Endpoint {
 func MakeNSStyleUploadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSUploadRequest)
-		output, err := svc.UploadStyleFile(req.FileName, nil)
+		output, err := svc.UploadStyleFile(req.FileName, req.ImgFile)
 		return NSResponse{Err: err, Output: output}, err
 	}
 }

@@ -43,7 +43,7 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 	))
 
 	// POST /styleTransfer/content
-	r.Methods("POST").Path("/styleTransfer/content/{filename}").Handler(httptransport.NewServer(
+	r.Methods("POST").Path("/styleTransfer/content").Handler(httptransport.NewServer(
 		endpoint.NSContentUploadEndpoint,
 		decodeNSUploadContentRequest,
 		encodeNSUploadContentResponse,
@@ -51,7 +51,7 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 	))
 
 	// POST /styleTransfer/style
-	r.Methods("POST").Path("/styleTransfer/style/{filename}").Handler(httptransport.NewServer(
+	r.Methods("POST").Path("/styleTransfer/style").Handler(httptransport.NewServer(
 		endpoint.NSStyleUploadEndpoint,
 		decodeNSUploadStyleRequest,
 		encodeNSUploadStyleResponse,
@@ -113,26 +113,33 @@ func decodeNeuralStyleCommonParams(vars map[string]string) (string, string, erro
 	if !ok {
 		return "", "", ErrBadRouting
 	}
-	contentPath, _ := base64.StdEncoding.DecodeString(content)
+	contentPath, err := base64.StdEncoding.DecodeString(content)
+	if err != nil {
+		return "", "", err
+	}
 
 	style, ok := vars["style"]
 	if !ok {
 		return "", "", ErrBadRouting
 	}
-	stylePath, _ := base64.StdEncoding.DecodeString(style)
+	stylePath, err := base64.StdEncoding.DecodeString(style)
+	if err != nil {
+		return "", "", err
+	}
 
 	return string(contentPath), string(stylePath), nil
 }
 
 func decodeNSUploadContentRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
+	r.ParseMultipartForm(1024)
+	fileHeader := r.MultipartForm.File["content"][0]
 
-	fileName, ok := vars["filename"]
-	if !ok {
-		return "", ErrBadRouting
+	file, err := fileHeader.Open()
+	if err != nil {
+		return "", errors.New("No content file header")
 	}
 
-	return NSUploadRequest{FileName: fileName}, nil
+	return NSUploadRequest{FileName: fileHeader.Filename, ImgFile: file}, nil
 }
 
 func encodeNSUploadContentResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
@@ -140,13 +147,15 @@ func encodeNSUploadContentResponse(ctx context.Context, w http.ResponseWriter, r
 }
 
 func decodeNSUploadStyleRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	fileName, ok := vars["filename"]
-	if !ok {
-		return "", ErrBadRouting
+	r.ParseMultipartForm(1024)
+	fileHeader := r.MultipartForm.File["style"][0]
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		return "", errors.New("No style file header")
 	}
 
-	return NSUploadRequest{FileName: fileName}, nil
+	return NSUploadRequest{FileName: fileHeader.Filename, ImgFile: file}, nil
 }
 
 func encodeNSUploadStyleResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {

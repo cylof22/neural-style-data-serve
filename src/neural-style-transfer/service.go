@@ -3,8 +3,12 @@ package StyleService
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"mime/multipart"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 )
@@ -13,8 +17,8 @@ import (
 type Service interface {
 	StyleTransfer(content, style string, iterations int) (string, error)
 	StyleTransferPreview(content, style string) (string, error)
-	UploadContentFile(name string, image []byte) (string, error)
-	UploadStyleFile(name string, image []byte) (string, error)
+	UploadContentFile(name string, imgFile multipart.File) (string, error)
+	UploadStyleFile(name string, imgFile multipart.File) (string, error)
 }
 
 // NeuralTransferService for final image style transfer
@@ -47,6 +51,9 @@ func (svc NeuralTransferService) StyleTransfer(content, style string, iterations
 
 	iterationsEnv := "iterations=" + strconv.Itoa(iterations)
 	networkPathEnv := "network=" + svc.NetworkPath + "imagenet-vgg-verydeep-19.mat"
+
+	fmt.Println("The content path is " + content)
+	fmt.Println("The style path is " + style)
 
 	wd, _ := os.Getwd()
 	pyfiles := wd + "/neural_style.py"
@@ -107,11 +114,33 @@ func (svc NeuralTransferService) StyleTransferPreview(content, style string) (st
 }
 
 // UploadContentFile upload content file to the cloud storage
-func (svc NeuralTransferService) UploadContentFile(name string, image []byte) (string, error) {
+func (svc NeuralTransferService) UploadContentFile(name string, imgFile multipart.File) (string, error) {
+	data, err := ioutil.ReadAll(imgFile)
+	if err != nil {
+		return "", errors.New("Faile to read the Content file")
+	}
+
+	outfilename := path.Join("./data/contents/", path.Ext(name))
+	err = ioutil.WriteFile(outfilename, data, 0777)
+	if err != nil {
+		return "", errors.New("Failed to creat the contents file")
+	}
+
 	return "", nil
 }
 
 // UploadStyleFile upload style file to the cloud storage
-func (svc NeuralTransferService) UploadStyleFile(name string, image []byte) (string, error) {
-	return "", nil
+func (svc NeuralTransferService) UploadStyleFile(name string, imgFile multipart.File) (string, error) {
+	data, err := ioutil.ReadAll(imgFile)
+	if err != nil {
+		return "", errors.New("Faile to read the Style file")
+	}
+
+	outfilename := path.Join("./data/styles/", path.Ext(name))
+	err = ioutil.WriteFile(outfilename, data, 0777)
+	if err != nil {
+		return "", errors.New("Failed to creat the style file")
+	}
+
+	return outfilename, nil
 }
