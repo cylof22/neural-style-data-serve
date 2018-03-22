@@ -58,6 +58,30 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 		options...,
 	))
 
+	// GET api/products
+	r.Methods("GET").Path("/api/products").Handler(httptransport.NewServer(
+		endpoint.NSGetProductsEndpoint,
+		decodeNSGetProductsRequest,
+		encodeNSGetProductsResponse,
+		options...,
+	))
+
+	// GET api/products/{id}
+	r.Methods("GET").Path("/api/products/{id}").Handler(httptransport.NewServer(
+		endpoint.NSGetProductsByIDEndpoint,
+		decodeNSGetProductByIDRequest,
+		encodeNSGetProductByIDResponse,
+		options...,
+	))
+
+	// GET api/products/{id}/reviews
+	r.Methods("GET").Path("/api/products/{id}/reviews").Handler(httptransport.NewServer(
+		endpoint.NSGetReviewsByIDEndpoint,
+		decodeNSGetReviewsByIDRequest,
+		encodeNSGetReviewsByIDResponse,
+		options...,
+	))
+
 	// output file server
 	outputFiles := http.FileServer(http.Dir("data/outputs/"))
 	r.PathPrefix("/outputs/").Handler(http.StripPrefix("/outputs/", outputFiles))
@@ -160,6 +184,62 @@ func decodeNSUploadStyleRequest(_ context.Context, r *http.Request) (interface{}
 
 func encodeNSUploadStyleResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	return nil
+}
+
+func decodeNSGetProductsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return nil, nil
+}
+
+func encodeNSGetProductsResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	productsRes := response.(NSGetProductsResponse)
+	if productsRes.Err != nil {
+		return productsRes.Err
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(productsRes.Products)
+}
+
+func decodeNSGetProductByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	idParams := vars["id"]
+	id, err := strconv.ParseUint(idParams, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	return NSGetProductByIDRequest{ID: id}, nil
+}
+
+func encodeNSGetProductByIDResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	productRes := response.(NSGetProductByIDResponse)
+	if productRes.Err != nil {
+		return productRes.Err
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(productRes.Target)
+}
+
+func decodeNSGetReviewsByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	idParams := vars["id"]
+	id, err := strconv.ParseUint(idParams, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	return NSGetReviewsByIDRequest{ID: id}, nil
+}
+
+func encodeNSGetReviewsByIDResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	reviewsRes := response.(NSGetReviewsByIDResponse)
+	if reviewsRes.Err != nil {
+		return reviewsRes.Err
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(reviewsRes.Reviews)
 }
 
 type errorer interface {

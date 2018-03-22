@@ -34,10 +34,13 @@ func main() {
 	}
 
 	endpoint := StyleService.Endpoints{
-		NSEndpoint:              StyleService.MakeNSEndpoint(svc),
-		NSPreviewEndpoint:       StyleService.MakeNSPreviewEndpoint(svc),
-		NSContentUploadEndpoint: StyleService.MakeNSContentUploadEndpoint(svc),
-		NSStyleUploadEndpoint:   StyleService.MakeNSStyleUploadEndpoint(svc),
+		NSEndpoint:                StyleService.MakeNSEndpoint(svc),
+		NSPreviewEndpoint:         StyleService.MakeNSPreviewEndpoint(svc),
+		NSContentUploadEndpoint:   StyleService.MakeNSContentUploadEndpoint(svc),
+		NSStyleUploadEndpoint:     StyleService.MakeNSStyleUploadEndpoint(svc),
+		NSGetProductsEndpoint:     StyleService.MakeNSGetProductsEndpoint(svc),
+		NSGetProductsByIDEndpoint: StyleService.MakeNSGetProductByIDEndpoint(svc),
+		NSGetReviewsByIDEndpoint:  StyleService.MakeNSGetReviewsByIDEndpoint(svc),
 	}
 
 	// Logging domain.

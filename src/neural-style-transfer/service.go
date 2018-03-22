@@ -17,7 +17,7 @@ import (
 type Product struct {
 	ID          uint64   `json:"id"`
 	Title       string   `json:"title"`
-	Price       float64  `json:"price"`
+	Price       float32  `json:"price"`
 	Rating      float32  `json:"rating"`
 	Description string   `json:"description"`
 	URL         string   `json:"url"`
@@ -171,57 +171,57 @@ func (svc NeuralTransferService) UploadStyleFile(name string, imgFile multipart.
 
 var allProducts = []Product{
 	{
-		0,
-		"First Product",
-		24.99,
-		4.3,
-		"This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		"http://localhost:9090/outputs/16-output.jpg",
-		[]string{"electronics", "hardware"}},
+		ID:          0,
+		Title:       "First Product",
+		Price:       24.99,
+		Rating:      4.3,
+		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+		URL:         "http://localhost:9090/outputs/16-output.jpg",
+		Categories:  []string{"electronics", "hardware"}},
 	{
-		1,
-		"Second Product",
-		64.99,
-		3.5,
-		"This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		"http://localhost:9090/outputs/11-output.jpg",
-		[]string{"books"},
+		ID:          1,
+		Title:       "Second Product",
+		Price:       64.99,
+		Rating:      3.5,
+		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+		URL:         "http://localhost:9090/outputs/11-output.jpg",
+		Categories:  []string{"books"},
 	},
 	{
-		2,
-		"Third Product",
-		74.99,
-		4.2,
-		"This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		"http://localhost:9090/outputs/12-output.jpg",
-		[]string{"electronics"},
+		ID:          2,
+		Title:       "Third Product",
+		Price:       74.99,
+		Rating:      4.2,
+		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+		URL:         "http://localhost:9090/outputs/12-output.jpg",
+		Categories:  []string{"electronics"},
 	},
 	{
-		3,
-		"Fourth Product",
-		84.99,
-		3.9,
-		"This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		"http://localhost:9090/outputs/13-output.jpg",
-		[]string{"hardware"},
+		ID:          3,
+		Title:       "Fourth Product",
+		Price:       84.99,
+		Rating:      3.9,
+		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+		URL:         "http://localhost:9090/outputs/13-output.jpg",
+		Categories:  []string{"hardware"},
 	},
 	{
-		4,
-		"Fifth Product",
-		94.99,
-		5,
-		"This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		"http://localhost:9090/outputs/14-output.jpg",
-		[]string{"electronics", "hardware"},
+		ID:          4,
+		Title:       "Fifth Product",
+		Price:       94.99,
+		Rating:      5,
+		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+		URL:         "http://localhost:9090/outputs/14-output.jpg",
+		Categories:  []string{"electronics", "hardware"},
 	},
 	{
-		5,
-		"Sixth Product",
-		54.99,
-		4.6,
-		"This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		"http://localhost:9090/outputs/15-output.jpg",
-		[]string{"books"},
+		ID:          5,
+		Title:       "Sixth Product",
+		Price:       54.99,
+		Rating:      4.6,
+		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+		URL:         "http://localhost:9090/outputs/15-output.jpg",
+		Categories:  []string{"books"},
 	},
 }
 
@@ -305,5 +305,5 @@ func (svc NeuralTransferService) GetReviewsByProductID(id uint64) ([]Review, err
 		return selectedReview, nil
 	}
 
-	return nil, errors.New("No reviews for target id " + strconv.FormatUint(id, 10))
+	return nil, nil
 }
