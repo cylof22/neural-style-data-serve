@@ -5,8 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"html/template"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"sync"
 
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -17,6 +20,45 @@ var (
 	// ErrBadRouting define the default routing error information
 	ErrBadRouting = errors.New("inconsistent mapping between route and handler (programmer error)")
 )
+
+func accessControl(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type")
+
+		if r.Method == "OPTIONS" {
+			return
+		}
+
+		h.ServeHTTP(w, r)
+	})
+}
+
+func webServerControl(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+		w.Header().Set("Content-Type", "text/html; text/javascript; text/css; charset=utf-8")
+
+		h.ServeHTTP(w, r)
+	})
+}
+
+// templ represents a single template
+type templateHandler struct {
+	once     sync.Once
+	filename string
+	templ    *template.Template
+}
+
+// ServeHTTP handles the HTTP request.
+func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	t.once.Do(func() {
+		t.templ = template.Must(template.ParseFiles(filepath.Join("dist",
+			t.filename)))
+	})
+	t.templ.Execute(w, r)
+}
 
 // MakeHTTPHandler generate the http handler for the style service handler
 func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger) http.Handler {
@@ -43,20 +85,22 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 	))
 
 	// POST /styleTransfer/content
-	r.Methods("POST").Path("/styleTransfer/content").Handler(httptransport.NewServer(
+	contentUploadHandler := httptransport.NewServer(
 		endpoint.NSContentUploadEndpoint,
 		decodeNSUploadContentRequest,
 		encodeNSUploadContentResponse,
 		options...,
-	))
+	)
+	r.Methods("POST").Path("/styleTransfer/content").Handler(accessControl(contentUploadHandler))
 
 	// POST /styleTransfer/style
-	r.Methods("POST").Path("/styleTransfer/style").Handler(httptransport.NewServer(
+	styleUploadHandler := httptransport.NewServer(
 		endpoint.NSStyleUploadEndpoint,
 		decodeNSUploadStyleRequest,
 		encodeNSUploadStyleResponse,
 		options...,
-	))
+	)
+	r.Methods("POST").Path("/styleTransfer/style").Handler(accessControl(styleUploadHandler))
 
 	// GET api/products
 	r.Methods("GET").Path("/api/products").Handler(httptransport.NewServer(
@@ -93,6 +137,18 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 	// content file server
 	contentFiles := http.FileServer(http.Dir("data/contents"))
 	r.PathPrefix("/contents/").Handler(http.StripPrefix("/contents/", contentFiles))
+
+	r.Path("/").Handler(webServerControl(&templateHandler{filename: "index.html"}))
+
+	// template file
+	resourceFile := http.FileServer(http.Dir("dist"))
+	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", resourceFile))
+
+	// js file
+	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", resourceFile))
+
+	r.Path("/").Handler(webServerControl(http.FileServer(http.Dir("templates"))))
+
 	return r
 }
 
@@ -155,35 +211,53 @@ func decodeNeuralStyleCommonParams(vars map[string]string) (string, string, erro
 }
 
 func decodeNSUploadContentRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	r.ParseMultipartForm(1024)
-	fileHeader := r.MultipartForm.File["content"][0]
-
-	file, err := fileHeader.Open()
-	if err != nil {
-		return "", errors.New("No content file header")
+	file, header, err := r.FormFile("uploadContentfile")
+	if file == nil {
+		return "", errors.New("No uploaded content file")
 	}
 
-	return NSUploadRequest{FileName: fileHeader.Filename, ImgFile: file}, nil
+	if err != nil {
+		return "", errors.New("Upload error")
+	}
+
+	return NSUploadRequest{FileName: header.Filename, ImgFile: file}, nil
 }
 
 func encodeNSUploadContentResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	return nil
+	contentRes := response.(NSResponse)
+	if contentRes.Err != nil {
+		return contentRes.Err
+	}
+
+	w.Header().Set("Access-Control-Allow-Methods", "POST, PUT, OPTIONS, DELETE, GET")
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
+	w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(contentRes)
 }
 
 func decodeNSUploadStyleRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	r.ParseMultipartForm(1024)
-	fileHeader := r.MultipartForm.File["style"][0]
-
-	file, err := fileHeader.Open()
-	if err != nil {
-		return "", errors.New("No style file header")
+	file, header, err := r.FormFile("uploadStyleFile")
+	if file == nil {
+		return "", errors.New("No uploaded style file")
 	}
 
-	return NSUploadRequest{FileName: fileHeader.Filename, ImgFile: file}, nil
+	if err != nil {
+		return "", errors.New("style file Upload error")
+	}
+
+	return NSUploadRequest{FileName: header.Filename, ImgFile: file}, nil
 }
 
 func encodeNSUploadStyleResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	return nil
+	styleRes := response.(NSResponse)
+	if styleRes.Err != nil {
+		return styleRes.Err
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(styleRes)
 }
 
 func decodeNSGetProductsRequest(_ context.Context, r *http.Request) (interface{}, error) {
