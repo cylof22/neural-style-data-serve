@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
-	"strings"
 )
 
 // Product define the basic elements of the product
@@ -50,6 +49,8 @@ type NeuralTransferService struct {
 	NetworkPath        string
 	PreviewNetworkPath string
 	OutputPath         string
+	Host               string
+	Port               string
 }
 
 // StyleTransfer for applying the style image to the content image, and generated it as output image
@@ -65,7 +66,8 @@ func (svc NeuralTransferService) StyleTransfer(content, style string, iterations
 	_, contentName := path.Split(content)
 	_, styleName := path.Split(style)
 
-	output := svc.OutputPath + "data/outputs/" + contentName + "_" + styleName + ".png"
+	outputName := contentName + "_" + styleName + ".png"
+	output := svc.OutputPath + "data/outputs/" + outputName
 	outputEnv := "output=" + output
 
 	iterationsEnv := "iterations=" + strconv.Itoa(iterations)
@@ -89,7 +91,7 @@ func (svc NeuralTransferService) StyleTransfer(content, style string, iterations
 	if _, err := os.Stat(output); os.IsNotExist(err) {
 		return "", errors.New("Style Transfer fails")
 	}
-	return output, nil
+	return svc.Host + ":" + svc.Port + "/outputs/" + outputName, nil
 }
 
 // StyleTransferPreview for applying the style image to the content image, and generated it as output image
@@ -102,15 +104,11 @@ func (svc NeuralTransferService) StyleTransferPreview(content, style string) (st
 	targetEnv := "content=" + content
 	styleEnv := "styles=" + style
 
-	contentPathSepIndex := strings.LastIndex(content, "/")
-	contentExtSepIndex := strings.LastIndex(content, ".")
-	contentName := content[contentPathSepIndex+1 : contentExtSepIndex]
+	_, contentName := path.Split(content)
+	_, styleName := path.Split(style)
 
-	stylePathSepIndex := strings.LastIndex(style, "/")
-	styleExtSepIndex := strings.LastIndex(style, ".")
-	styleName := style[stylePathSepIndex+1 : styleExtSepIndex]
-
-	output := svc.OutputPath + "data/outputs/" + contentName + "_" + styleName + "_" + "preview" + ".png"
+	outputName := contentName + "_" + styleName + "_" + "preview" + ".png"
+	output := svc.OutputPath + "data/outputs/" + outputName
 	outputEnv := "output=" + output
 
 	wd, _ := os.Getwd()
@@ -129,7 +127,7 @@ func (svc NeuralTransferService) StyleTransferPreview(content, style string) (st
 		return "", errors.New("Style Transfer Preview fails")
 	}
 
-	return output, nil
+	return svc.Host + ":" + svc.Port + "/outputs/" + outputName, nil
 }
 
 // UploadContentFile upload content file to the cloud storage
