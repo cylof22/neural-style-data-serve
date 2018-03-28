@@ -196,9 +196,6 @@ func readProducts() []Product {
 // GetProducts find all the generated products(images)
 func (svc NeuralTransferService) GetProducts() ([]Product, error) {
 	allProducts := readProducts()
-	for _, prod := range allProducts {
-		fmt.Println(prod.Owener)
-	}
 	return allProducts, nil
 }
 
