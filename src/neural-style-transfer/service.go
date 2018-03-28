@@ -174,7 +174,7 @@ var allProducts = []Product{
 		Price:       24.99,
 		Rating:      4.3,
 		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		URL:         "http://localhost:9090/outputs/16-output.jpg",
+		URL:         "http://127.0.0.1:9090/outputs/16-output.jpg",
 		Categories:  []string{"electronics", "hardware"}},
 	{
 		ID:          1,
@@ -182,7 +182,7 @@ var allProducts = []Product{
 		Price:       64.99,
 		Rating:      3.5,
 		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		URL:         "http://localhost:9090/outputs/11-output.jpg",
+		URL:         "http://127.0.0.1:9090/outputs/11-output.jpg",
 		Categories:  []string{"books"},
 	},
 	{
@@ -191,7 +191,7 @@ var allProducts = []Product{
 		Price:       74.99,
 		Rating:      4.2,
 		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		URL:         "http://localhost:9090/outputs/12-output.jpg",
+		URL:         "http://127.0.0.1:9090/outputs/12-output.jpg",
 		Categories:  []string{"electronics"},
 	},
 	{
@@ -200,7 +200,7 @@ var allProducts = []Product{
 		Price:       84.99,
 		Rating:      3.9,
 		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		URL:         "http://localhost:9090/outputs/13-output.jpg",
+		URL:         "http://127.0.0.1:9090/outputs/13-output.jpg",
 		Categories:  []string{"hardware"},
 	},
 	{
@@ -209,7 +209,7 @@ var allProducts = []Product{
 		Price:       94.99,
 		Rating:      5,
 		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		URL:         "http://localhost:9090/outputs/14-output.jpg",
+		URL:         "http://127.0.0.1:9090/outputs/14-output.jpg",
 		Categories:  []string{"electronics", "hardware"},
 	},
 	{
@@ -218,7 +218,7 @@ var allProducts = []Product{
 		Price:       54.99,
 		Rating:      4.6,
 		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		URL:         "http://localhost:9090/outputs/15-output.jpg",
+		URL:         "http://127.0.0.1:9090/outputs/15-output.jpg",
 		Categories:  []string{"books"},
 	},
 }

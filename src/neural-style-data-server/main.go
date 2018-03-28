@@ -31,6 +31,8 @@ func main() {
 		NetworkPath:        *networkPath,
 		PreviewNetworkPath: *previewNetworkPath,
 		OutputPath:         *outputPath,
+		Host:               *serverURL,
+		Port:               *serverPort,
 	}
 
 	endpoint := StyleService.Endpoints{
