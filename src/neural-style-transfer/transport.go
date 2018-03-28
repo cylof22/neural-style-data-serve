@@ -229,10 +229,6 @@ func encodeNSUploadContentResponse(ctx context.Context, w http.ResponseWriter, r
 		return contentRes.Err
 	}
 
-	w.Header().Set("Access-Control-Allow-Methods", "POST, PUT, OPTIONS, DELETE, GET")
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
-	w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
-
 	w.Header().Set("context-type", "application/json, charset=utf8")
 	return json.NewEncoder(w).Encode(contentRes)
 }
@@ -276,11 +272,7 @@ func encodeNSGetProductsResponse(ctx context.Context, w http.ResponseWriter, res
 
 func decodeNSGetProductByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
-	idParams := vars["id"]
-	id, err := strconv.ParseUint(idParams, 10, 64)
-	if err != nil {
-		return nil, err
-	}
+	id := vars["id"]
 
 	return NSGetProductByIDRequest{ID: id}, nil
 }
@@ -297,11 +289,7 @@ func encodeNSGetProductByIDResponse(ctx context.Context, w http.ResponseWriter, 
 
 func decodeNSGetReviewsByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
-	idParams := vars["id"]
-	id, err := strconv.ParseUint(idParams, 10, 64)
-	if err != nil {
-		return nil, err
-	}
+	id := vars["id"]
 
 	return NSGetReviewsByIDRequest{ID: id}, nil
 }

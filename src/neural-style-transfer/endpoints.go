@@ -40,7 +40,7 @@ type NSGetProductsResponse struct {
 
 // NSGetProductByIDRequest define the input parameter for get product by id
 type NSGetProductByIDRequest struct {
-	ID uint64
+	ID string
 }
 
 // NSGetProductByIDResponse output the selected product by id
@@ -51,7 +51,7 @@ type NSGetProductByIDResponse struct {
 
 // NSGetReviewsByIDRequest define the parameters for get reviews
 type NSGetReviewsByIDRequest struct {
-	ID uint64
+	ID string
 }
 
 // NSGetReviewsByIDResponse output the selected reviews

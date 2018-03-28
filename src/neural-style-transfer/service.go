@@ -2,6 +2,7 @@ package StyleService
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,19 +15,22 @@ import (
 
 // Product define the basic elements of the product
 type Product struct {
-	ID          uint64   `json:"id"`
+	ID          string   `json:"id"`
 	Title       string   `json:"title"`
+	Owener      string   `json:"owner"`
+	Creator     string   `json:"creator"`
 	Price       float32  `json:"price"`
 	Rating      float32  `json:"rating"`
 	Description string   `json:"description"`
 	URL         string   `json:"url"`
+	StyleImgURL string   `json:"styleImgUrl"`
 	Categories  []string `json:"categories"`
 }
 
 // Review define the basic elements of the review
 type Review struct {
 	ID        uint32 `json:"id"`
-	ProductID uint64 `json:"productId"`
+	ProductID string `json:"productId"`
 	Timestamp string `json:"timestamp"`
 	User      string `json:"user"`
 	Rating    uint8  `json:"rating"`
@@ -40,8 +44,8 @@ type Service interface {
 	UploadContentFile(name string, imgFile multipart.File) (string, error)
 	UploadStyleFile(name string, imgFile multipart.File) (string, error)
 	GetProducts() ([]Product, error)
-	GetProductsByID(id uint64) (Product, error)
-	GetReviewsByProductID(id uint64) ([]Review, error)
+	GetProductsByID(id string) (Product, error)
+	GetReviewsByProductID(id string) ([]Review, error)
 }
 
 // NeuralTransferService for final image style transfer
@@ -167,81 +171,52 @@ func (svc NeuralTransferService) UploadStyleFile(name string, imgFile multipart.
 	return outfilename, nil
 }
 
-var allProducts = []Product{
-	{
-		ID:          0,
-		Title:       "First Product",
-		Price:       24.99,
-		Rating:      4.3,
-		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		URL:         "http://127.0.0.1:9090/outputs/16-output.jpg",
-		Categories:  []string{"electronics", "hardware"}},
-	{
-		ID:          1,
-		Title:       "Second Product",
-		Price:       64.99,
-		Rating:      3.5,
-		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		URL:         "http://127.0.0.1:9090/outputs/11-output.jpg",
-		Categories:  []string{"books"},
-	},
-	{
-		ID:          2,
-		Title:       "Third Product",
-		Price:       74.99,
-		Rating:      4.2,
-		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		URL:         "http://127.0.0.1:9090/outputs/12-output.jpg",
-		Categories:  []string{"electronics"},
-	},
-	{
-		ID:          3,
-		Title:       "Fourth Product",
-		Price:       84.99,
-		Rating:      3.9,
-		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		URL:         "http://127.0.0.1:9090/outputs/13-output.jpg",
-		Categories:  []string{"hardware"},
-	},
-	{
-		ID:          4,
-		Title:       "Fifth Product",
-		Price:       94.99,
-		Rating:      5,
-		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		URL:         "http://127.0.0.1:9090/outputs/14-output.jpg",
-		Categories:  []string{"electronics", "hardware"},
-	},
-	{
-		ID:          5,
-		Title:       "Sixth Product",
-		Price:       54.99,
-		Rating:      4.6,
-		Description: "This is a short description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		URL:         "http://127.0.0.1:9090/outputs/15-output.jpg",
-		Categories:  []string{"books"},
-	},
+func readProducts() []Product {
+	file := "./data/info/images.json"
+	var products []Product
+
+	inFile, err := os.Open(file)
+	defer inFile.Close()
+
+	if err != nil {
+		fmt.Println("Read Products Error" + err.Error())
+		return nil
+	}
+
+	decoder := json.NewDecoder(inFile)
+	err = decoder.Decode(&products)
+	if err != nil {
+		fmt.Println("decode Products error" + err.Error())
+		return nil
+	}
+
+	return products
 }
 
 // GetProducts find all the generated products(images)
 func (svc NeuralTransferService) GetProducts() ([]Product, error) {
+	allProducts := readProducts()
+	for _, prod := range allProducts {
+		fmt.Println(prod.Owener)
+	}
 	return allProducts, nil
 }
 
 // GetProductsByID find the product by id
-func (svc NeuralTransferService) GetProductsByID(id uint64) (Product, error) {
+func (svc NeuralTransferService) GetProductsByID(id string) (Product, error) {
+	allProducts := readProducts()
 	for _, prod := range allProducts {
 		if prod.ID == id {
 			return prod, nil
 		}
 	}
-	return Product{}, errors.New("No Product for the " + strconv.FormatUint(id, 10))
+	return Product{}, errors.New("No Product for the " + id)
 }
 
 var reviews = []Review{
 	{
 		0,
-		0,
+		"0",
 		"2014-05-20T02:17:00+00:00",
 		"User 1",
 		5,
@@ -249,7 +224,7 @@ var reviews = []Review{
 	},
 	{
 		1,
-		0,
+		"0",
 		"2014-05-20T02:53:00+00:00",
 		"User 2",
 		3,
@@ -257,7 +232,7 @@ var reviews = []Review{
 	},
 	{
 		2,
-		0,
+		"0",
 		"2014-05-20T05:26:00+00:00",
 		"User 3",
 		4,
@@ -265,7 +240,7 @@ var reviews = []Review{
 	},
 	{
 		3,
-		0,
+		"0",
 		"2014-05-20T07:20:00+00:00",
 		"User 4",
 		4,
@@ -273,7 +248,7 @@ var reviews = []Review{
 	},
 	{
 		4,
-		0,
+		"0",
 		"2014-05-20T11:35:00+00:00",
 		"User 5",
 		5,
@@ -281,7 +256,7 @@ var reviews = []Review{
 	},
 	{
 		5,
-		0,
+		"0",
 		"2014-05-20T11:42:00+00:00",
 		"User 6",
 		5,
@@ -290,7 +265,7 @@ var reviews = []Review{
 }
 
 // GetReviewsByProductID find the
-func (svc NeuralTransferService) GetReviewsByProductID(id uint64) ([]Review, error) {
+func (svc NeuralTransferService) GetReviewsByProductID(id string) ([]Review, error) {
 	var selectedReview []Review
 
 	for _, review := range reviews {
