@@ -86,7 +86,7 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 		encodeNSUploadContentResponse,
 		options...,
 	)
-	r.Methods("POST").Path("/styleTransfer/content").Handler(accessControl(contentUploadHandler))
+	r.Methods("POST").Path("/api/upload/content").Handler(accessControl(contentUploadHandler))
 
 	// POST /styleTransfer/style
 	styleUploadHandler := httptransport.NewServer(
@@ -95,7 +95,7 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 		encodeNSUploadStyleResponse,
 		options...,
 	)
-	r.Methods("POST").Path("/styleTransfer/style").Handler(accessControl(styleUploadHandler))
+	r.Methods("POST").Path("/api/upload/style").Handler(accessControl(styleUploadHandler))
 
 	// GET api/products
 	r.Methods("GET").Path("/api/products").Handler(httptransport.NewServer(
@@ -109,7 +109,7 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 	r.Methods("GET").Path("/api/products/{id}").Handler(httptransport.NewServer(
 		endpoint.NSGetProductsByIDEndpoint,
 		decodeNSGetProductByIDRequest,
-		encodeNSGetProductByIDResponse,
+		encodeNSGetProductByIdResponse,
 		options...,
 	))
 
@@ -206,49 +206,35 @@ func decodeNeuralStyleCommonParams(vars map[string]string) (string, string, erro
 }
 
 func decodeNSUploadContentRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	file, header, err := r.FormFile("uploadContentfile")
-	if file == nil {
-		return "", errors.New("No uploaded content file")
-	}
-
-	if err != nil {
-		return "", errors.New("Upload error")
-	}
-
-	return NSUploadRequest{FileName: header.Filename, ImgFile: file}, nil
+	productData := Product{ID:"1"}
+	json.NewDecoder(r.Body).Decode(&productData)
+	return NSUploadRequest{ProductData: productData}, nil
 }
 
 func encodeNSUploadContentResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	contentRes := response.(NSResponse)
+	contentRes := response.(NSGetProductResponse)
 	if contentRes.Err != nil {
 		return contentRes.Err
 	}
 
 	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(contentRes)
+	return json.NewEncoder(w).Encode(contentRes.Target)
 }
 
 func decodeNSUploadStyleRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	file, header, err := r.FormFile("uploadStyleFile")
-	if file == nil {
-		return "", errors.New("No uploaded style file")
-	}
-
-	if err != nil {
-		return "", errors.New("style file Upload error")
-	}
-
-	return NSUploadRequest{FileName: header.Filename, ImgFile: file}, nil
+	productData := Product{ID:"1"}
+	json.NewDecoder(r.Body).Decode(&productData)
+	return NSUploadRequest{ProductData: productData}, nil
 }
 
 func encodeNSUploadStyleResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	styleRes := response.(NSResponse)
+	styleRes := response.(NSGetProductResponse)
 	if styleRes.Err != nil {
 		return styleRes.Err
 	}
 
 	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(styleRes)
+	return json.NewEncoder(w).Encode(styleRes.Target)
 }
 
 func decodeNSGetProductsRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -272,8 +258,8 @@ func decodeNSGetProductByIDRequest(_ context.Context, r *http.Request) (interfac
 	return NSGetProductByIDRequest{ID: id}, nil
 }
 
-func encodeNSGetProductByIDResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	productRes := response.(NSGetProductByIDResponse)
+func encodeNSGetProductByIdResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	productRes := response.(NSGetProductResponse)
 	if productRes.Err != nil {
 		return productRes.Err
 	}

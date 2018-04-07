@@ -15,7 +15,7 @@ import (
 )
 
 var serverURL = flag.String("host", "localhost", "neural style server url")
-var serverPort = flag.String("port", "9090", "neural style server port")
+var serverPort = flag.String("port", "8000", "neural style server port")
 var networkPath = flag.String("network", "", "neural network model path")
 var previewNetworkPath = flag.String("previewNetwork", "", "neural network preview model path")
 var outputPath = flag.String("outputdir", "./", "neural style transfer output directory")
@@ -57,7 +57,7 @@ func main() {
 
 	// HTTP transport
 	go func() {
-		fmt.Println("Starting server at port 9090")
+		fmt.Println("Starting server at port 8000")
 		handler := r
 		errChan <- http.ListenAndServe(*serverURL+":"+*serverPort, handler)
 	}()

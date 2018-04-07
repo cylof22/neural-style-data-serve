@@ -2,8 +2,6 @@ package StyleService
 
 import (
 	"context"
-	"mime/multipart"
-
 	"github.com/go-kit/kit/endpoint"
 )
 
@@ -22,8 +20,7 @@ type NSPreviewRequest struct {
 
 // NSUploadRequest parameters for upload file
 type NSUploadRequest struct {
-	FileName string
-	ImgFile  multipart.File
+	ProductData Product
 }
 
 // NSResponse error information for the style transfer
@@ -44,7 +41,7 @@ type NSGetProductByIDRequest struct {
 }
 
 // NSGetProductByIDResponse output the selected product by id
-type NSGetProductByIDResponse struct {
+type NSGetProductResponse struct {
 	Target Product
 	Err    error
 }
@@ -93,8 +90,8 @@ func MakeNSPreviewEndpoint(svc Service) endpoint.Endpoint {
 func MakeNSContentUploadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSUploadRequest)
-		output, err := svc.UploadContentFile(req.FileName, req.ImgFile)
-		return NSResponse{Err: err, Output: output}, err
+		prod, err := svc.UploadContentFile(req.ProductData)
+		return NSGetProductResponse{Target: prod, Err: err}, err
 	}
 }
 
@@ -102,8 +99,8 @@ func MakeNSContentUploadEndpoint(svc Service) endpoint.Endpoint {
 func MakeNSStyleUploadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSUploadRequest)
-		output, err := svc.UploadStyleFile(req.FileName, req.ImgFile)
-		return NSResponse{Err: err, Output: output}, err
+		prod, err := svc.UploadStyleFile(req.ProductData)
+		return NSGetProductResponse{Target: prod, Err: err}, err
 	}
 }
 
@@ -120,7 +117,7 @@ func MakeNSGetProductByIDEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSGetProductByIDRequest)
 		prod, err := svc.GetProductsByID(req.ID)
-		return NSGetProductByIDResponse{Target: prod, Err: err}, err
+		return NSGetProductResponse{Target: prod, Err: err}, err
 	}
 }
 
