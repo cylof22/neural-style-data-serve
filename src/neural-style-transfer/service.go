@@ -6,18 +6,23 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
+	"crypto/md5"  
+    "crypto/rand"  
+    "encoding/base64"  
+	"encoding/hex" 
+	"strings"
+	"io/ioutil"
 )
 
 // Product define the basic elements of the product
 type Product struct {
 	ID          string   `json:"id"`
 	Title       string   `json:"title"`
-	Owener      string   `json:"owner"`
+	Owner      string   `json:"owner"`
 	Creator     string   `json:"creator"`
 	Price       float32  `json:"price"`
 	Rating      float32  `json:"rating"`
@@ -41,12 +46,14 @@ type Review struct {
 type Service interface {
 	StyleTransfer(content, style string, iterations int) (string, error)
 	StyleTransferPreview(content, style string) (string, error)
-	UploadContentFile(name string, imgFile multipart.File) (string, error)
-	UploadStyleFile(name string, imgFile multipart.File) (string, error)
+	UploadContentFile(productData Product) (Product, error)
+	UploadStyleFile(productData Product) (Product, error)
 	GetProducts() ([]Product, error)
 	GetProductsByID(id string) (Product, error)
 	GetReviewsByProductID(id string) ([]Review, error)
 }
+
+var allProducts = readProducts()
 
 // NeuralTransferService for final image style transfer
 type NeuralTransferService struct {
@@ -134,48 +141,107 @@ func (svc NeuralTransferService) StyleTransferPreview(content, style string) (st
 	return svc.Host + ":" + svc.Port + "/outputs/" + outputName, nil
 }
 
+//生成32位md5字串  
+func GetMd5String(s string) string {  
+    h := md5.New()  
+    h.Write([]byte(s))  
+    return hex.EncodeToString(h.Sum(nil))  
+}  
+  
+//生成Guid字串  
+func UniqueId() string {  
+    b := make([]byte, 48)  
+  
+    if _, err := io.ReadFull(rand.Reader, b); err != nil {  
+        return ""  
+    }  
+    return GetMd5String(base64.URLEncoding.EncodeToString(b))  
+} 
+
+// upload picture file
+func uploadPicutre(picData string, picId string, picFolder string) (string, error) {
+	outfileName := picId + ".png"
+ 	outfilePath := path.Join("./data", picFolder, outfileName)
+
+	pos := strings.Index(picData,",")
+	realData := picData[pos+1:len(picData)]
+	baseData, _ := base64.StdEncoding.DecodeString(realData)
+	err := ioutil.WriteFile(outfilePath, baseData, 0644)
+	if err != nil {
+		return "", err
+	}
+
+	newImageUrl := "http://localhost:8000/" + picFolder + "/" + outfileName
+	fmt.Println("New picuture is created: " + newImageUrl)
+	return newImageUrl, nil
+}
+
 // UploadContentFile upload content file to the cloud storage
-func (svc NeuralTransferService) UploadContentFile(name string, imgFile multipart.File) (string, error) {
-	outfilename := path.Join("./data/contents/", name)
+func (svc NeuralTransferService) UploadContentFile(productData Product) (Product, error) {
+	imageId := UniqueId()
+	newImageUrl, err := uploadPicutre(productData.URL, imageId, "contents")
 
-	savedFile, err := os.Create(outfilename)
+	newContent := Product{ID:imageId}
 	if err != nil {
-		return "", err
-	}
-	defer savedFile.Close()
-
-	_, err = io.Copy(savedFile, imgFile)
-	if err != nil {
-		return "", err
+		fmt.Println(err)
+		return newContent, err
 	}
 
-	return outfilename, nil
+	newContent.URL = newImageUrl
+	return newContent, nil
 }
 
 // UploadStyleFile upload style file to the cloud storage
-func (svc NeuralTransferService) UploadStyleFile(name string, imgFile multipart.File) (string, error) {
-	outfilename := path.Join("./data/styles/", name)
+func (svc NeuralTransferService) UploadStyleFile(productData Product) (Product, error) {
+	imageId := UniqueId()
+	newImageUrl, err := uploadPicutre(productData.URL, imageId, "styles")
 
-	savedFile, err := os.Create(outfilename)
+	newProduct := Product{ID:imageId}
 	if err != nil {
-		return "", errors.New("Failed to create the style file")
+		fmt.Println(err)
+		return newProduct, err
 	}
 
-	defer savedFile.Close()
+	newProduct.Owner = productData.Owner;
+	newProduct.Creator = productData.Creator;
+	if (newProduct.Creator == ""){
+		newProduct.Creator = productData.Owner;
+	}
+	newProduct.Title = productData.Title;
+	newProduct.Description = productData.Description;
+	newProduct.Price = productData.Price;
+	newProduct.Categories = productData.Categories;
+	newProduct.URL = newImageUrl;
+	newProduct.StyleImgURL = productData.StyleImgURL;
 
-	_, err = io.Copy(savedFile, imgFile)
+	// add it to product data and update local data
+	allProducts = append(allProducts, newProduct)
+	saveProducts()
+
+	return newProduct, nil
+}
+
+var productsFile = "./data/info/images.json"
+func saveProducts() {
+	inFile, err := os.OpenFile(productsFile, os.O_RDWR|os.O_CREATE, 0755)
+	defer inFile.Close()
+
 	if err != nil {
-		return "", err
+		fmt.Println("Write Products Error" + err.Error())
+		return
 	}
 
-	return outfilename, nil
+	err = json.NewEncoder(inFile).Encode(&allProducts)
+	if err != nil {
+		fmt.Println("Write Products Error" + err.Error())
+		return
+	}
 }
 
 func readProducts() []Product {
-	file := "./data/info/images.json"
 	var products []Product
 
-	inFile, err := os.Open(file)
+	inFile, err := os.Open(productsFile)
 	defer inFile.Close()
 
 	if err != nil {
@@ -195,13 +261,13 @@ func readProducts() []Product {
 
 // GetProducts find all the generated products(images)
 func (svc NeuralTransferService) GetProducts() ([]Product, error) {
-	allProducts := readProducts()
+	//allProducts := readProducts()
 	return allProducts, nil
 }
 
 // GetProductsByID find the product by id
 func (svc NeuralTransferService) GetProductsByID(id string) (Product, error) {
-	allProducts := readProducts()
+	//allProducts := readProducts()
 	for _, prod := range allProducts {
 		if prod.ID == id {
 			return prod, nil
