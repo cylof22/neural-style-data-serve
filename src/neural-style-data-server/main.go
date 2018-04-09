@@ -12,10 +12,13 @@ import (
 	"neural-style-transfer"
 
 	"github.com/go-kit/kit/log"
+	mgo "gopkg.in/mgo.v2"
 )
 
 var serverURL = flag.String("host", "localhost", "neural style server url")
 var serverPort = flag.String("port", "9090", "neural style server port")
+var dbServerURL = flag.String("dbserver", "localhost", "style products server url")
+var dbServerPort = flag.String("dbport", "9000", "style products port url")
 var networkPath = flag.String("network", "", "neural network model path")
 var previewNetworkPath = flag.String("previewNetwork", "", "neural network preview model path")
 var outputPath = flag.String("outputdir", "./", "neural style transfer output directory")
@@ -26,6 +29,15 @@ func main() {
 	ctx := context.Background()
 	errChan := make(chan error)
 
+	session, err := mgo.Dial(*dbServerURL + ":" + *dbServerPort)
+	if err != nil {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+		errChan <- fmt.Errorf("%s", <-c)
+	}
+	defer session.Close()
+	session.SetMode(mgo.Monotonic, true)
+
 	var svc StyleService.Service
 	svc = StyleService.NeuralTransferService{
 		NetworkPath:        *networkPath,
@@ -33,6 +45,7 @@ func main() {
 		OutputPath:         *outputPath,
 		Host:               *serverURL,
 		Port:               *serverPort,
+		Session:            session,
 	}
 
 	endpoint := StyleService.Endpoints{

@@ -11,6 +11,9 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
+
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // Product define the basic elements of the product
@@ -55,6 +58,7 @@ type NeuralTransferService struct {
 	OutputPath         string
 	Host               string
 	Port               string
+	Session            *mgo.Session
 }
 
 // StyleTransfer for applying the style image to the content image, and generated it as output image
@@ -195,19 +199,38 @@ func readProducts() []Product {
 
 // GetProducts find all the generated products(images)
 func (svc NeuralTransferService) GetProducts() ([]Product, error) {
-	allProducts := readProducts()
-	return allProducts, nil
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("products")
+
+	var products []Product
+	err := c.Find(bson.M{}).All(&products)
+	if err != nil {
+		// Add log information here
+		return products, errors.New("Database error")
+	}
+
+	return products, nil
 }
 
 // GetProductsByID find the product by id
 func (svc NeuralTransferService) GetProductsByID(id string) (Product, error) {
-	allProducts := readProducts()
-	for _, prod := range allProducts {
-		if prod.ID == id {
-			return prod, nil
-		}
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("products")
+	var product Product
+	err := c.Find(bson.M{"id": id}).One(&product)
+	if err != nil {
+		return Product{}, errors.New("Database error")
 	}
-	return Product{}, errors.New("No Product for the " + id)
+
+	if product.ID != id {
+		return Product{}, errors.New("Failed to find product for the id: " + id)
+	}
+
+	return product, nil
 }
 
 var reviews = []Review{
