@@ -354,16 +354,21 @@ var reviews = []Review{
 
 // GetReviewsByProductID find the
 func (svc NeuralTransferService) GetReviewsByProductID(id string) ([]Review, error) {
-	var selectedReview []Review
 
-	for _, review := range reviews {
-		if review.ProductID == id {
-			selectedReview = append(selectedReview, review)
-		}
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("reviews")
+
+	var reviews []Review
+	err := c.Find(bson.M{"productId": id}).All(&reviews)
+	if err != nil {
+		// Add log information here
+		return reviews, errors.New("Database error")
 	}
 
-	if len(selectedReview) != 0 {
-		return selectedReview, nil
+	if len(reviews) != 0 {
+		return reviews, nil
 	}
 
 	return nil, nil
