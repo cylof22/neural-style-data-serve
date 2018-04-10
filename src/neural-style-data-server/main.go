@@ -23,6 +23,40 @@ var networkPath = flag.String("network", "", "neural network model path")
 var previewNetworkPath = flag.String("previewNetwork", "", "neural network preview model path")
 var outputPath = flag.String("outputdir", "./", "neural style transfer output directory")
 
+func ensureIndex(s *mgo.Session) {
+	session := s.Copy()
+	defer session.Close()
+
+	products := session.DB("store").C("products")
+
+	index := mgo.Index{
+		Key:        []string{"id"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err := products.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
+	reviews := session.DB("store").C("reviews")
+
+	index = mgo.Index{
+		Key:        []string{"productId"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+
+	err = reviews.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func main() {
 	flag.Parse()
 
@@ -37,6 +71,7 @@ func main() {
 	}
 	defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
+	ensureIndex(session)
 
 	var svc StyleService.Service
 	svc = StyleService.NeuralTransferService{
