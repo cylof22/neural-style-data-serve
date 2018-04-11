@@ -30,15 +30,6 @@ func accessControl(h http.Handler) http.Handler {
 	})
 }
 
-func webServerControl(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-		w.Header().Set("Content-Type", "text/html; text/javascript; text/css; charset=utf-8")
-
-		h.ServeHTTP(w, r)
-	})
-}
-
 // templ represents a single template
 type templateHandler struct {
 	once     sync.Once
@@ -133,16 +124,11 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 	contentFiles := http.FileServer(http.Dir("data/contents"))
 	r.PathPrefix("/contents/").Handler(http.StripPrefix("/contents/", contentFiles))
 
-	r.Path("/").Handler(webServerControl(&templateHandler{filename: "index.html"}))
-
 	// template file
 	resourceFile := http.FileServer(http.Dir("dist"))
-	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", resourceFile))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", resourceFile))
 
-	// js file
-	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", resourceFile))
-
-	r.Path("/").Handler(webServerControl(http.FileServer(http.Dir("templates"))))
+	r.Path("/").Handler(resourceFile)
 
 	return r
 }
@@ -206,7 +192,7 @@ func decodeNeuralStyleCommonParams(vars map[string]string) (string, string, erro
 }
 
 func decodeNSUploadContentRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	productData := Product{ID:"1"}
+	productData := Product{ID: "1"}
 	json.NewDecoder(r.Body).Decode(&productData)
 	return NSUploadRequest{ProductData: productData}, nil
 }
@@ -222,7 +208,7 @@ func encodeNSUploadContentResponse(ctx context.Context, w http.ResponseWriter, r
 }
 
 func decodeNSUploadStyleRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	productData := Product{ID:"1"}
+	productData := Product{ID: "1"}
 	json.NewDecoder(r.Body).Decode(&productData)
 	return NSUploadRequest{ProductData: productData}, nil
 }
