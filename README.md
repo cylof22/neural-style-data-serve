@@ -12,6 +12,8 @@
 		go get github.com/go-logfmt/logfmt
 			
 		go get github.com/go-stack/stack
+		
+		go get gopkg.in/mgo.v2
 			
 	 (2) Define the local GOPATH environment for the go build
 	 
