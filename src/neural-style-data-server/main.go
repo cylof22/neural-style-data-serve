@@ -91,6 +91,8 @@ func main() {
 		NSGetProductsEndpoint:     StyleService.MakeNSGetProductsEndpoint(svc),
 		NSGetProductsByIDEndpoint: StyleService.MakeNSGetProductByIDEndpoint(svc),
 		NSGetReviewsByIDEndpoint:  StyleService.MakeNSGetReviewsByIDEndpoint(svc),
+		NSRegisterEndpoint:        StyleService.MakeNSRegisterEndpoint(svc),
+		NSLoginEndpoint:           StyleService.MakeNSLoginEndpoint(svc),
 	}
 
 	// Logging domain.

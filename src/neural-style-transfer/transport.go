@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"fmt"
 
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -20,6 +21,46 @@ var (
 	// ErrBadRouting define the default routing error information
 	ErrBadRouting = errors.New("inconsistent mapping between route and handler (programmer error)")
 )
+
+func getUsername(req *http.Request) string {
+	var authString = ""
+	if len(req.Header) > 0 {
+		for k,v := range req.Header {
+			if k == "Authorization" {
+				authString = v[0]
+			}
+		}
+	}
+
+	if authString == "" {
+		return ""
+	}
+
+	_, username := CheckToken(authString)
+	return username
+}
+
+func usernameMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    	getUsername(r)
+        next.ServeHTTP(w, r)
+    })
+}
+
+func authMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username := getUsername(r)
+        if username == "" {
+			//w.Header().Set("Content-Type", "text/html; text/javascript; text/css; charset=utf-8")
+            w.WriteHeader(http.StatusUnauthorized)
+            w.Write([]byte("Unauthorized"))
+        } else {
+			fmt.Println("user name is ", username)
+            next.ServeHTTP(w, r)
+        }
+    })
+}
+
 
 func accessControl(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -55,20 +96,20 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 	}
 
 	//GET /styleTransfer/{content}/{style}/{iterations}
-	r.Methods("GET").Path("/styleTransfer").Queries("content", "{content}", "style", "{style}", "iterations", "{iterations:[0-9]+}").Handler(httptransport.NewServer(
+	r.Methods("GET").Path("/styleTransfer").Queries("content", "{content}", "style", "{style}", "iterations", "{iterations:[0-9]+}").Handler(authMiddleware(httptransport.NewServer(
 		endpoint.NSEndpoint,
 		decodeNSRequest,
 		encodeNSResponse,
 		options...,
-	))
+	)))
 
 	//GET /styleTransferPreview/{content}/{style}
-	r.Methods("GET").Path("/styleTransferPreview").Queries("content", "{content}", "style", "{style}").Handler(httptransport.NewServer(
+	r.Methods("GET").Path("/styleTransferPreview").Queries("content", "{content}", "style", "{style}").Handler(authMiddleware(httptransport.NewServer(
 		endpoint.NSPreviewEndpoint,
 		decodeNSPreviewRequest,
 		encodeNSResponse,
 		options...,
-	))
+	)))
 
 	// POST /styleTransfer/content
 	contentUploadHandler := httptransport.NewServer(
@@ -77,7 +118,7 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 		encodeNSUploadContentResponse,
 		options...,
 	)
-	r.Methods("POST").Path("/api/upload/content").Handler(accessControl(contentUploadHandler))
+	r.Methods("POST").Path("/api/upload/content").Handler(authMiddleware(accessControl(contentUploadHandler)))
 
 	// POST /styleTransfer/style
 	styleUploadHandler := httptransport.NewServer(
@@ -86,15 +127,33 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 		encodeNSUploadStyleResponse,
 		options...,
 	)
-	r.Methods("POST").Path("/api/upload/style").Handler(accessControl(styleUploadHandler))
+	r.Methods("POST").Path("/api/upload/style").Handler(authMiddleware(accessControl(styleUploadHandler)))
+
+	// Register
+	registerHandler := httptransport.NewServer(
+		endpoint.NSRegisterEndpoint,
+		decodeNSRegisterRequest,
+		encodeNSRegisterResponse,
+		options...,
+	)
+	r.Methods("POST").Path("/api/register").Handler(accessControl(registerHandler))
+
+	// Login
+	loginHandler := httptransport.NewServer(
+		endpoint.NSLoginEndpoint,
+		decodeNSLoginRequest,
+		encodeNSLoginResponse,
+		options...,
+	)
+	r.Methods("POST").Path("/api/authenticate").Handler(accessControl(loginHandler))
 
 	// GET api/products
-	r.Methods("GET").Path("/api/products").Handler(httptransport.NewServer(
+	r.Methods("GET").Path("/api/products").Handler(usernameMiddleware(httptransport.NewServer(
 		endpoint.NSGetProductsEndpoint,
 		decodeNSGetProductsRequest,
 		encodeNSGetProductsResponse,
 		options...,
-	))
+	)))
 
 	// GET api/products/{id}
 	r.Methods("GET").Path("/api/products/{id}").Handler(httptransport.NewServer(
@@ -105,12 +164,12 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 	))
 
 	// GET api/products/{id}/reviews
-	r.Methods("GET").Path("/api/products/{id}/reviews").Handler(httptransport.NewServer(
+	r.Methods("GET").Path("/api/products/{id}/reviews").Handler(authMiddleware(httptransport.NewServer(
 		endpoint.NSGetReviewsByIDEndpoint,
 		decodeNSGetReviewsByIDRequest,
 		encodeNSGetReviewsByIDResponse,
 		options...,
-	))
+	)))
 
 	// output file server
 	outputFiles := http.FileServer(http.Dir("data/outputs/"))
@@ -288,12 +347,45 @@ func encodeNSResponse(ctx context.Context, w http.ResponseWriter, response inter
 }
 
 func encodeError(ctx context.Context, err error, w http.ResponseWriter) {
-	if err != nil {
+/* 	if err != nil {
 		panic("encodeError with nil error")
-	}
+	} */
 
 	w.Header().Set("context-type", "application/json,charset=utf8")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": err.Error(),
 	})
+}
+
+func decodeNSRegisterRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	userData := UserInfo{ID:"1"}
+	json.NewDecoder(r.Body).Decode(&userData)
+	return NSAuthenticationRequest{UserData: userData}, nil
+}
+
+func encodeNSRegisterResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	if e, ok := response.(errorer); ok && e.error() != nil {
+		encodeError(ctx, e.error(), w)
+		return nil
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(response)
+}
+
+func decodeNSLoginRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	userData := UserInfo{ID:"1"}
+	json.NewDecoder(r.Body).Decode(&userData)
+	return NSAuthenticationRequest{UserData: userData}, nil
+}
+
+func encodeNSLoginResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	loginRes := response.(NSLoginResponse)
+	if loginRes.Err != nil {
+		return loginRes.Err
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(loginRes.Target)
+	return nil
 }
