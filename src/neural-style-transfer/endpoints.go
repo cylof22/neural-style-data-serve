@@ -57,6 +57,23 @@ type NSGetReviewsByIDResponse struct {
 	Err     error
 }
 
+// NSAuthentication parameters for register and login
+type NSAuthenticationRequest struct {
+	UserData UserInfo
+}
+
+// NSRegisterResponse returns register result
+type NSRegisterResponse struct {
+	Result string `json:"result"`
+	Err    error  `json:"err"`
+}
+
+// NSLoginResponse returns token
+type NSLoginResponse struct {
+	Target UserToken
+	Err    error
+}
+
 // Endpoints wrap the Neural Style Service
 type Endpoints struct {
 	NSEndpoint                endpoint.Endpoint
@@ -66,6 +83,8 @@ type Endpoints struct {
 	NSGetProductsEndpoint     endpoint.Endpoint
 	NSGetProductsByIDEndpoint endpoint.Endpoint
 	NSGetReviewsByIDEndpoint  endpoint.Endpoint
+	NSRegisterEndpoint        endpoint.Endpoint
+	NSLoginEndpoint           endpoint.Endpoint
 }
 
 // MakeNSEndpoint generate style transfer endpoint
@@ -127,5 +146,21 @@ func MakeNSGetReviewsByIDEndpoint(svc Service) endpoint.Endpoint {
 		req := request.(NSGetReviewsByIDRequest)
 		reviews, err := svc.GetReviewsByProductID(req.ID)
 		return NSGetReviewsByIDResponse{Reviews: reviews, Err: err}, err
+	}
+}
+
+func MakeNSRegisterEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSAuthenticationRequest)
+		res, err := svc.Register(req.UserData)
+		return NSRegisterResponse{Result: res, Err: err}, err
+	}
+}
+
+func MakeNSLoginEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSAuthenticationRequest)
+		token, err := svc.Login(req.UserData)
+		return NSLoginResponse{Target: token, Err: err}, err
 	}
 }

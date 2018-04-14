@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
+	"time"
 
 	"crypto/md5"
 	"crypto/rand"
@@ -19,6 +20,12 @@ import (
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+
+	"github.com/dgrijalva/jwt-go"
+)
+
+const (
+	SecretKey = "Tulian is great"
 )
 
 // Product define the basic elements of the product
@@ -45,6 +52,22 @@ type Review struct {
 	Comment   string `json:"comment"`
 }
 
+type UserInfo struct {
+	ID                string   `json:"id"`
+	Name              string   `json:"username"`
+	Password          string   `json:"password"`
+	Phone             string   `json:"phone"`
+	Email             string   `json:"email"`
+	ConcernedProducts []string `json:"concernedProducts"`
+	ConcernedUsers    []string `json:"concernedUsers"`
+}
+
+type UserToken struct {
+	ID                string   `json:"id"`
+	Name              string   `json:"username"`
+	Token             string   `json:"token"`
+}
+
 // Service for neural style transfer service
 type Service interface {
 	StyleTransfer(content, style string, iterations int) (string, error)
@@ -54,6 +77,8 @@ type Service interface {
 	GetProducts() ([]Product, error)
 	GetProductsByID(id string) (Product, error)
 	GetReviewsByProductID(id string) ([]Review, error)
+	Register(userData UserInfo) (string, error)
+	Login(loginData UserInfo) (UserToken, error)
 }
 
 // NeuralTransferService for final image style transfer
@@ -250,6 +275,7 @@ func (svc NeuralTransferService) GetProducts() ([]Product, error) {
 	err := c.Find(bson.M{}).All(&products)
 	if err != nil {
 		// Add log information here
+		fmt.Println(err)
 		return products, errors.New("Database error")
 	}
 
@@ -265,6 +291,7 @@ func (svc NeuralTransferService) GetProductsByID(id string) (Product, error) {
 	var product Product
 	err := c.Find(bson.M{"id": id}).One(&product)
 	if err != nil {
+		fmt.Println(err)
 		return Product{}, errors.New("Database error")
 	}
 
@@ -287,6 +314,7 @@ func (svc NeuralTransferService) GetReviewsByProductID(id string) ([]Review, err
 	err := c.Find(bson.M{"productId": id}).All(&reviews)
 	if err != nil {
 		// Add log information here
+		fmt.Println(err)
 		return reviews, errors.New("Database error")
 	}
 
@@ -295,4 +323,95 @@ func (svc NeuralTransferService) GetReviewsByProductID(id string) ([]Review, err
 	}
 
 	return nil, nil
+}
+
+func (svc NeuralTransferService) Register(userData UserInfo) (string, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	// if the user name exists
+	var currentUser UserInfo
+	c := session.DB("store").C("users")
+	err := c.Find(bson.M{"name": userData.Name}).One(&currentUser)
+	if err == nil {
+		return "", errors.New("User with this name already exists")
+	}
+
+	userData.ID = UniqueID()
+	result := "Success"
+	err = c.Insert(userData)
+	if err != nil {
+		result = "fail"
+		return result, errors.New("Failed to add a new user")
+	}
+
+	fmt.Println("Register data is")
+	fmt.Println(userData)
+	return result, err
+}
+
+func (svc NeuralTransferService) Login(loginData UserInfo) (UserToken, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("users")
+
+	var user UserInfo
+	err := c.Find(bson.M{"name": loginData.Name}).One(&user)
+	if err != nil {
+		return UserToken{}, errors.New("This user name is wrong")
+	}
+
+ 	if user.Password != loginData.Password {
+		return UserToken{}, errors.New("This password is wrong")
+	}
+
+	var userToken UserToken
+	userToken.Name = user.Name
+	userToken.ID = user.ID
+	userToken.Token = CreateToken(loginData.Name)
+	return userToken, err
+}
+
+func CreateToken(userName string) string {
+	claims := make(jwt.MapClaims)
+	claims["username"] = userName
+	claims["exp"] = time.Now().Add(time.Hour * 72).Unix() //72小时有效期，过期需要重新登录获取token
+	claims["iat"] = time.Now().Unix()
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(SecretKey))
+    if err != nil {
+		fmt.Println("Error for sign token: ")
+        fmt.Println(err)
+        return ""
+	}
+	
+	return tokenString
+}
+
+func CheckToken(authString string) (bool, string) {
+	authList := strings.Split(authString, " ")
+	if len(authList) != 2 || authList[0] != "Bearer" {
+        fmt.Println("No authorization info")
+        return false, ""
+	}
+	
+	tokenString := authList[1]
+    token, err := jwt.Parse(tokenString, func(*jwt.Token) (interface{}, error) {
+        return []byte(SecretKey), nil
+    })
+    if err != nil {
+        fmt.Println("parse claims failed: ", err)
+        return false, ""
+	}
+	
+	claims, ok := token.Claims.(jwt.MapClaims)
+    if !ok {
+        fmt.Println("Can't access claims")
+        return false, ""
+	}
+	user := claims["username"].(string)
+
+    return true, user
 }
