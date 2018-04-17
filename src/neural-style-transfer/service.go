@@ -63,9 +63,16 @@ type UserInfo struct {
 }
 
 type UserToken struct {
-	ID                string   `json:"id"`
-	Name              string   `json:"username"`
-	Token             string   `json:"token"`
+	ID    string `json:"id"`
+	Name  string `json:"username"`
+	Token string `json:"token"`
+}
+
+// Artist define the basic artist information
+type Artist struct {
+	Name        string `json:"name"`
+	Masterpiece string `json:"masterpiece"`
+	ModelName   string `json:"modelname"`
 }
 
 // Service for neural style transfer service
@@ -79,6 +86,8 @@ type Service interface {
 	GetReviewsByProductID(id string) ([]Review, error)
 	Register(userData UserInfo) (string, error)
 	Login(loginData UserInfo) (UserToken, error)
+	GetArtists() ([]Artist, error)
+	GetHotestArtists() ([]Artist, error)
 }
 
 // NeuralTransferService for final image style transfer
@@ -325,6 +334,7 @@ func (svc NeuralTransferService) GetReviewsByProductID(id string) ([]Review, err
 	return nil, nil
 }
 
+// Register create a new user
 func (svc NeuralTransferService) Register(userData UserInfo) (string, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
@@ -350,6 +360,7 @@ func (svc NeuralTransferService) Register(userData UserInfo) (string, error) {
 	return result, err
 }
 
+// Login login the style transfer platform
 func (svc NeuralTransferService) Login(loginData UserInfo) (UserToken, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
@@ -362,7 +373,7 @@ func (svc NeuralTransferService) Login(loginData UserInfo) (UserToken, error) {
 		return UserToken{}, errors.New("This user name is wrong")
 	}
 
- 	if user.Password != loginData.Password {
+	if user.Password != loginData.Password {
 		return UserToken{}, errors.New("This password is wrong")
 	}
 
@@ -373,6 +384,7 @@ func (svc NeuralTransferService) Login(loginData UserInfo) (UserToken, error) {
 	return userToken, err
 }
 
+// CreateToken create time-limited token
 func CreateToken(userName string) string {
 	claims := make(jwt.MapClaims)
 	claims["username"] = userName
@@ -381,37 +393,74 @@ func CreateToken(userName string) string {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(SecretKey))
-    if err != nil {
+	if err != nil {
 		fmt.Println("Error for sign token: ")
-        fmt.Println(err)
-        return ""
+		fmt.Println(err)
+		return ""
 	}
-	
+
 	return tokenString
 }
 
+// CheckToken validate the token
 func CheckToken(authString string) (bool, string) {
 	authList := strings.Split(authString, " ")
 	if len(authList) != 2 || authList[0] != "Bearer" {
-        fmt.Println("No authorization info")
-        return false, ""
+		fmt.Println("No authorization info")
+		return false, ""
 	}
-	
+
 	tokenString := authList[1]
-    token, err := jwt.Parse(tokenString, func(*jwt.Token) (interface{}, error) {
-        return []byte(SecretKey), nil
-    })
-    if err != nil {
-        fmt.Println("parse claims failed: ", err)
-        return false, ""
+	token, err := jwt.Parse(tokenString, func(*jwt.Token) (interface{}, error) {
+		return []byte(SecretKey), nil
+	})
+	if err != nil {
+		fmt.Println("parse claims failed: ", err)
+		return false, ""
 	}
-	
+
 	claims, ok := token.Claims.(jwt.MapClaims)
-    if !ok {
-        fmt.Println("Can't access claims")
-        return false, ""
+	if !ok {
+		fmt.Println("Can't access claims")
+		return false, ""
 	}
 	user := claims["username"].(string)
 
-    return true, user
+	return true, user
+}
+
+// GetArtists return all the available artists
+func (svc NeuralTransferService) GetArtists() ([]Artist, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("artists")
+
+	var artists []Artist
+	err := c.Find(bson.M{}).All(&artists)
+	if err != nil {
+		// Add log information here
+		fmt.Println(err)
+		return artists, errors.New("Database error")
+	}
+
+	return artists, nil
+}
+
+// GetHotestArtists return the active hotest artist
+func (svc NeuralTransferService) GetHotestArtists() ([]Artist, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("artists")
+
+	var artists []Artist
+	err := c.Find(bson.M{}).All(&artists)
+	if err != nil {
+		// Add log information here
+		fmt.Println(err)
+		return artists, errors.New("Database error")
+	}
+
+	return artists, nil
 }

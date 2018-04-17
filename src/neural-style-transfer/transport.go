@@ -5,12 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 	"path/filepath"
 	"strconv"
 	"sync"
-	"fmt"
 
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -25,7 +25,7 @@ var (
 func getUsername(req *http.Request) string {
 	var authString = ""
 	if len(req.Header) > 0 {
-		for k,v := range req.Header {
+		for k, v := range req.Header {
 			if k == "Authorization" {
 				authString = v[0]
 			}
@@ -41,26 +41,25 @@ func getUsername(req *http.Request) string {
 }
 
 func usernameMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    	getUsername(r)
-        next.ServeHTTP(w, r)
-    })
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		getUsername(r)
+		next.ServeHTTP(w, r)
+	})
 }
 
 func authMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username := getUsername(r)
-        if username == "" {
+		if username == "" {
 			//w.Header().Set("Content-Type", "text/html; text/javascript; text/css; charset=utf-8")
-            w.WriteHeader(http.StatusUnauthorized)
-            w.Write([]byte("Unauthorized"))
-        } else {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Unauthorized"))
+		} else {
 			fmt.Println("user name is ", username)
-            next.ServeHTTP(w, r)
-        }
-    })
+			next.ServeHTTP(w, r)
+		}
+	})
 }
-
 
 func accessControl(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -128,6 +127,22 @@ func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger)
 		options...,
 	)
 	r.Methods("POST").Path("/api/upload/style").Handler(authMiddleware(accessControl(styleUploadHandler)))
+
+	// GET /api/artists
+	r.Methods("GET").Path("/api/artists").Handler(authMiddleware(accessControl(httptransport.NewServer(
+		endpoint.NSGetArtistsEndpoint,
+		decodeNSGetArtistRequest,
+		encodeNSGetArtistsResponse,
+		options...,
+	))))
+
+	// GET /api/artists/hotest
+	r.Methods("GET").Path("/api/artists/hotest").Handler(authMiddleware(accessControl(httptransport.NewServer(
+		endpoint.NSGetHotestArtistsEndpoint,
+		decodeNSGetArtistRequest,
+		encodeNSGetArtistsResponse,
+		options...,
+	))))
 
 	// Register
 	registerHandler := httptransport.NewServer(
@@ -296,6 +311,20 @@ func encodeNSGetProductsResponse(ctx context.Context, w http.ResponseWriter, res
 	return json.NewEncoder(w).Encode(productsRes.Products)
 }
 
+func decodeNSGetArtistRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return nil, nil
+}
+
+func encodeNSGetArtistsResponse(ctx context.Context, w http.ResponseWriter, res interface{}) error {
+	artistsRes := res.(NSGetArtistsResponse)
+	if artistsRes.Err != nil {
+		return artistsRes.Err
+	}
+
+	w.Header().Set("content-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(artistsRes.Artists)
+}
+
 func decodeNSGetProductByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id := vars["id"]
@@ -347,7 +376,7 @@ func encodeNSResponse(ctx context.Context, w http.ResponseWriter, response inter
 }
 
 func encodeError(ctx context.Context, err error, w http.ResponseWriter) {
-/* 	if err != nil {
+	/* 	if err != nil {
 		panic("encodeError with nil error")
 	} */
 
@@ -358,7 +387,7 @@ func encodeError(ctx context.Context, err error, w http.ResponseWriter) {
 }
 
 func decodeNSRegisterRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	userData := UserInfo{ID:"1"}
+	userData := UserInfo{ID: "1"}
 	json.NewDecoder(r.Body).Decode(&userData)
 	return NSAuthenticationRequest{UserData: userData}, nil
 }
@@ -374,7 +403,7 @@ func encodeNSRegisterResponse(ctx context.Context, w http.ResponseWriter, respon
 }
 
 func decodeNSLoginRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	userData := UserInfo{ID:"1"}
+	userData := UserInfo{ID: "1"}
 	json.NewDecoder(r.Body).Decode(&userData)
 	return NSAuthenticationRequest{UserData: userData}, nil
 }
@@ -387,5 +416,4 @@ func encodeNSLoginResponse(ctx context.Context, w http.ResponseWriter, response 
 
 	w.Header().Set("context-type", "application/json, charset=utf8")
 	return json.NewEncoder(w).Encode(loginRes.Target)
-	return nil
 }
