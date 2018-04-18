@@ -196,6 +196,10 @@ func UniqueID() string {
 
 // upload picture file
 func uploadPicutre(picData string, picID string, picFolder string) (string, error) {
+	if strings.HasPrefix(picData, "http") {
+		return picData, nil
+	}
+
 	outfileName := picID + ".png"
 	outfilePath := path.Join("./data", picFolder, outfileName)
 
