@@ -2,6 +2,7 @@ package StyleService
 
 import (
 	"context"
+
 	"github.com/go-kit/kit/endpoint"
 )
 
@@ -40,7 +41,7 @@ type NSGetProductByIDRequest struct {
 	ID string
 }
 
-// NSGetProductByIDResponse output the selected product by id
+// NSGetProductResponse output the selected product by id
 type NSGetProductResponse struct {
 	Target Product
 	Err    error
@@ -57,7 +58,7 @@ type NSGetReviewsByIDResponse struct {
 	Err     error
 }
 
-// NSAuthentication parameters for register and login
+// NSAuthenticationRequest parameters for register and login
 type NSAuthenticationRequest struct {
 	UserData UserInfo
 }
@@ -74,17 +75,25 @@ type NSLoginResponse struct {
 	Err    error
 }
 
+// NSGetArtistsResponse return supported artists
+type NSGetArtistsResponse struct {
+	Artists []Artist
+	Err     error
+}
+
 // Endpoints wrap the Neural Style Service
 type Endpoints struct {
-	NSEndpoint                endpoint.Endpoint
-	NSPreviewEndpoint         endpoint.Endpoint
-	NSContentUploadEndpoint   endpoint.Endpoint
-	NSStyleUploadEndpoint     endpoint.Endpoint
-	NSGetProductsEndpoint     endpoint.Endpoint
-	NSGetProductsByIDEndpoint endpoint.Endpoint
-	NSGetReviewsByIDEndpoint  endpoint.Endpoint
-	NSRegisterEndpoint        endpoint.Endpoint
-	NSLoginEndpoint           endpoint.Endpoint
+	NSEndpoint                 endpoint.Endpoint
+	NSPreviewEndpoint          endpoint.Endpoint
+	NSContentUploadEndpoint    endpoint.Endpoint
+	NSStyleUploadEndpoint      endpoint.Endpoint
+	NSGetProductsEndpoint      endpoint.Endpoint
+	NSGetProductsByIDEndpoint  endpoint.Endpoint
+	NSGetReviewsByIDEndpoint   endpoint.Endpoint
+	NSRegisterEndpoint         endpoint.Endpoint
+	NSLoginEndpoint            endpoint.Endpoint
+	NSGetArtistsEndpoint       endpoint.Endpoint
+	NSGetHotestArtistsEndpoint endpoint.Endpoint
 }
 
 // MakeNSEndpoint generate style transfer endpoint
@@ -149,6 +158,7 @@ func MakeNSGetReviewsByIDEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
+// MakeNSRegisterEndpoint generate the endpoint for new user register
 func MakeNSRegisterEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSAuthenticationRequest)
@@ -157,10 +167,27 @@ func MakeNSRegisterEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
+// MakeNSLoginEndpoint generate the endpoint for user's login
 func MakeNSLoginEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSAuthenticationRequest)
 		token, err := svc.Login(req.UserData)
 		return NSLoginResponse{Target: token, Err: err}, err
+	}
+}
+
+// MakeNSGetArtists generate the endpoint for get hotest artists
+func MakeNSGetArtists(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		artists, err := svc.GetArtists()
+		return NSGetArtistsResponse{Artists: artists, Err: err}, err
+	}
+}
+
+// MakeNSGetHotestArtists generate the endpoint for getting hotest artists
+func MakeNSGetHotestArtists(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		hotestArtists, err := svc.GetHotestArtists()
+		return NSGetArtistsResponse{Artists: hotestArtists, Err: err}, err
 	}
 }
