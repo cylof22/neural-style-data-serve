@@ -5,6 +5,7 @@
 *.pyc
 *.mat
 *.h5
+*.py
 
 # Folders
 _obj
