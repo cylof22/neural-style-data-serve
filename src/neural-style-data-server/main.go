@@ -9,8 +9,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"neural-style-transfer"
-
 	"github.com/go-kit/kit/log"
 	mgo "gopkg.in/mgo.v2"
 )
@@ -73,30 +71,6 @@ func main() {
 	session.SetMode(mgo.Monotonic, true)
 	ensureIndex(session)
 
-	var svc StyleService.Service
-	svc = StyleService.NeuralTransferService{
-		NetworkPath:        *networkPath,
-		PreviewNetworkPath: *previewNetworkPath,
-		OutputPath:         *outputPath,
-		Host:               *serverURL,
-		Port:               *serverPort,
-		Session:            session,
-	}
-
-	endpoint := StyleService.Endpoints{
-		NSEndpoint:                 StyleService.MakeNSEndpoint(svc),
-		NSPreviewEndpoint:          StyleService.MakeNSPreviewEndpoint(svc),
-		NSContentUploadEndpoint:    StyleService.MakeNSContentUploadEndpoint(svc),
-		NSStyleUploadEndpoint:      StyleService.MakeNSStyleUploadEndpoint(svc),
-		NSGetProductsEndpoint:      StyleService.MakeNSGetProductsEndpoint(svc),
-		NSGetProductsByIDEndpoint:  StyleService.MakeNSGetProductByIDEndpoint(svc),
-		NSGetReviewsByIDEndpoint:   StyleService.MakeNSGetReviewsByIDEndpoint(svc),
-		NSRegisterEndpoint:         StyleService.MakeNSRegisterEndpoint(svc),
-		NSLoginEndpoint:            StyleService.MakeNSLoginEndpoint(svc),
-		NSGetArtistsEndpoint:       StyleService.MakeNSGetArtists(svc),
-		NSGetHotestArtistsEndpoint: StyleService.MakeNSGetHotestArtists(svc),
-	}
-
 	// Logging domain.
 	var logger log.Logger
 	{
@@ -105,7 +79,7 @@ func main() {
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
-	r := StyleService.MakeHTTPHandler(ctx, endpoint, logger)
+	r := makeHTTPHandler(ctx, session, logger)
 
 	// HTTP transport
 	go func() {
