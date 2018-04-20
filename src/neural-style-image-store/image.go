@@ -8,19 +8,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 // Image define the basic information for the uploaded image
 type Image struct {
-	ID          string
-	UserID      string
-	Name        string
-	Location    string
-	Size        int64
-	CreatedAt   time.Time
-	Description string
-	ParentPath  string
+	UserID     string
+	Location   string
+	ParentPath string
 }
 
 var mimeExtensions = map[string]string{
@@ -48,14 +42,14 @@ func (img *Image) CreateImageFromURL(imageURL string) (string, error) {
 	}
 
 	// Get an extension for the file
-	ext, valid := mimeExtensions[mimeType]
+	_, valid := mimeExtensions[mimeType]
 	if !valid {
 		return "", errors.New("Unsupported image type" + mimeType)
 	}
 
 	// Get a name from the URL
-	img.Name = filepath.Base(imageURL)
-	img.Location = img.ID + ext
+	imgName := filepath.Base(imageURL)
+	img.Location = imgName
 
 	imgPath := img.ParentPath + img.Location
 	savedFile, err := os.Create(imgPath)
@@ -65,20 +59,18 @@ func (img *Image) CreateImageFromURL(imageURL string) (string, error) {
 	}
 	defer savedFile.Close()
 
-	size, err := io.Copy(savedFile, response.Body)
+	_, err = io.Copy(savedFile, response.Body)
 	if err != nil {
 		return "", err
 	}
-
-	img.Size = size
 
 	return imgPath, nil
 }
 
 // CreateFromFile create the local image on sever from a upload file
 func (img *Image) CreateFromFile(file multipart.File, headers *multipart.FileHeader) (string, error) {
-	img.Name = headers.Filename
-	img.Location = img.ID + filepath.Ext(img.Name)
+	imgName := headers.Filename
+	img.Location = imgName
 
 	savedPath := img.ParentPath + img.Location
 	savedFile, err := os.Create(savedPath)
@@ -87,11 +79,10 @@ func (img *Image) CreateFromFile(file multipart.File, headers *multipart.FileHea
 	}
 	defer savedFile.Close()
 
-	size, err := io.Copy(savedFile, file)
+	_, err = io.Copy(savedFile, file)
 	if err != nil {
 		return "", err
 	}
-	img.Size = size
 
 	return savedPath, nil
 }
