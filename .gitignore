@@ -5,11 +5,13 @@
 *.pyc
 *.mat
 *.h5
+*.py
 
 # Folders
 _obj
 _test
 bin/data
+bin
 
 # Architecture specific extensions/prefixes
 *.[568vq]

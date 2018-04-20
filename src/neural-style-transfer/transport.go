@@ -11,7 +11,8 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/go-kit/kit/log"
+	"neural-style-util"
+
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 )
@@ -20,15 +21,6 @@ var (
 	// ErrBadRouting define the default routing error information
 	ErrBadRouting = errors.New("inconsistent mapping between route and handler (programmer error)")
 )
-
-func accessControl(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-
-		h.ServeHTTP(w, r)
-	})
-}
 
 // templ represents a single template
 type templateHandler struct {
@@ -47,88 +39,22 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // MakeHTTPHandler generate the http handler for the style service handler
-func MakeHTTPHandler(ctx context.Context, endpoint Endpoints, logger log.Logger) http.Handler {
-	r := mux.NewRouter()
-	options := []httptransport.ServerOption{
-		httptransport.ServerErrorLogger(logger),
-		httptransport.ServerErrorEncoder(encodeError),
-	}
-
+func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc Service, options ...httptransport.ServerOption) *mux.Router {
 	//GET /styleTransfer/{content}/{style}/{iterations}
-	r.Methods("GET").Path("/styleTransfer").Queries("content", "{content}", "style", "{style}", "iterations", "{iterations:[0-9]+}").Handler(httptransport.NewServer(
-		endpoint.NSEndpoint,
+	r.Methods("GET").Path("/styleTransfer").Queries("content", "{content}", "style", "{style}", "iterations", "{iterations:[0-9]+}").Handler(NSUtil.AuthMiddleware(httptransport.NewServer(
+		MakeNSEndpoint(svc),
 		decodeNSRequest,
 		encodeNSResponse,
 		options...,
-	))
+	)))
 
 	//GET /styleTransferPreview/{content}/{style}
-	r.Methods("GET").Path("/styleTransferPreview").Queries("content", "{content}", "style", "{style}").Handler(httptransport.NewServer(
-		endpoint.NSPreviewEndpoint,
+	r.Methods("GET").Path("/styleTransferPreview").Queries("content", "{content}", "style", "{style}").Handler(NSUtil.AuthMiddleware(httptransport.NewServer(
+		MakeNSPreviewEndpoint(svc),
 		decodeNSPreviewRequest,
 		encodeNSResponse,
 		options...,
-	))
-
-	// POST /styleTransfer/content
-	contentUploadHandler := httptransport.NewServer(
-		endpoint.NSContentUploadEndpoint,
-		decodeNSUploadContentRequest,
-		encodeNSUploadContentResponse,
-		options...,
-	)
-	r.Methods("POST").Path("/api/upload/content").Handler(accessControl(contentUploadHandler))
-
-	// POST /styleTransfer/style
-	styleUploadHandler := httptransport.NewServer(
-		endpoint.NSStyleUploadEndpoint,
-		decodeNSUploadStyleRequest,
-		encodeNSUploadStyleResponse,
-		options...,
-	)
-	r.Methods("POST").Path("/api/upload/style").Handler(accessControl(styleUploadHandler))
-
-	// GET api/products
-	r.Methods("GET").Path("/api/products").Handler(httptransport.NewServer(
-		endpoint.NSGetProductsEndpoint,
-		decodeNSGetProductsRequest,
-		encodeNSGetProductsResponse,
-		options...,
-	))
-
-	// GET api/products/{id}
-	r.Methods("GET").Path("/api/products/{id}").Handler(httptransport.NewServer(
-		endpoint.NSGetProductsByIDEndpoint,
-		decodeNSGetProductByIDRequest,
-		encodeNSGetProductByIdResponse,
-		options...,
-	))
-
-	// GET api/products/{id}/reviews
-	r.Methods("GET").Path("/api/products/{id}/reviews").Handler(httptransport.NewServer(
-		endpoint.NSGetReviewsByIDEndpoint,
-		decodeNSGetReviewsByIDRequest,
-		encodeNSGetReviewsByIDResponse,
-		options...,
-	))
-
-	// output file server
-	outputFiles := http.FileServer(http.Dir("data/outputs/"))
-	r.PathPrefix("/outputs/").Handler(http.StripPrefix("/outputs/", outputFiles))
-
-	// style file server
-	styleFiles := http.FileServer(http.Dir("data/styles/"))
-	r.PathPrefix("/styles/").Handler(http.StripPrefix("/styles", styleFiles))
-
-	// content file server
-	contentFiles := http.FileServer(http.Dir("data/contents"))
-	r.PathPrefix("/contents/").Handler(http.StripPrefix("/contents/", contentFiles))
-
-	// template file
-	resourceFile := http.FileServer(http.Dir("dist"))
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", resourceFile))
-
-	r.Path("/").Handler(resourceFile)
+	)))
 
 	return r
 }
@@ -191,86 +117,6 @@ func decodeNeuralStyleCommonParams(vars map[string]string) (string, string, erro
 	return string(contentPath), string(stylePath), nil
 }
 
-func decodeNSUploadContentRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	productData := Product{ID: "1"}
-	json.NewDecoder(r.Body).Decode(&productData)
-	return NSUploadRequest{ProductData: productData}, nil
-}
-
-func encodeNSUploadContentResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	contentRes := response.(NSGetProductResponse)
-	if contentRes.Err != nil {
-		return contentRes.Err
-	}
-
-	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(contentRes.Target)
-}
-
-func decodeNSUploadStyleRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	productData := Product{ID: "1"}
-	json.NewDecoder(r.Body).Decode(&productData)
-	return NSUploadRequest{ProductData: productData}, nil
-}
-
-func encodeNSUploadStyleResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	styleRes := response.(NSGetProductResponse)
-	if styleRes.Err != nil {
-		return styleRes.Err
-	}
-
-	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(styleRes.Target)
-}
-
-func decodeNSGetProductsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return nil, nil
-}
-
-func encodeNSGetProductsResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	productsRes := response.(NSGetProductsResponse)
-	if productsRes.Err != nil {
-		return productsRes.Err
-	}
-
-	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(productsRes.Products)
-}
-
-func decodeNSGetProductByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	return NSGetProductByIDRequest{ID: id}, nil
-}
-
-func encodeNSGetProductByIdResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	productRes := response.(NSGetProductResponse)
-	if productRes.Err != nil {
-		return productRes.Err
-	}
-
-	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(productRes.Target)
-}
-
-func decodeNSGetReviewsByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	return NSGetReviewsByIDRequest{ID: id}, nil
-}
-
-func encodeNSGetReviewsByIDResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	reviewsRes := response.(NSGetReviewsByIDResponse)
-	if reviewsRes.Err != nil {
-		return reviewsRes.Err
-	}
-
-	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(reviewsRes.Reviews)
-}
-
 type errorer interface {
 	error() error
 }
@@ -288,9 +134,9 @@ func encodeNSResponse(ctx context.Context, w http.ResponseWriter, response inter
 }
 
 func encodeError(ctx context.Context, err error, w http.ResponseWriter) {
-	if err != nil {
+	/* 	if err != nil {
 		panic("encodeError with nil error")
-	}
+	} */
 
 	w.Header().Set("context-type", "application/json,charset=utf8")
 	json.NewEncoder(w).Encode(map[string]interface{}{

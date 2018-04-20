@@ -2,6 +2,7 @@ package StyleService
 
 import (
 	"context"
+
 	"github.com/go-kit/kit/endpoint"
 )
 
@@ -18,54 +19,10 @@ type NSPreviewRequest struct {
 	Style   string
 }
 
-// NSUploadRequest parameters for upload file
-type NSUploadRequest struct {
-	ProductData Product
-}
-
 // NSResponse error information for the style transfer
 type NSResponse struct {
 	Err    error  `json:"err"`
 	Output string `json:"output"`
-}
-
-// NSGetProductsResponse output the json response
-type NSGetProductsResponse struct {
-	Products []Product
-	Err      error
-}
-
-// NSGetProductByIDRequest define the input parameter for get product by id
-type NSGetProductByIDRequest struct {
-	ID string
-}
-
-// NSGetProductByIDResponse output the selected product by id
-type NSGetProductResponse struct {
-	Target Product
-	Err    error
-}
-
-// NSGetReviewsByIDRequest define the parameters for get reviews
-type NSGetReviewsByIDRequest struct {
-	ID string
-}
-
-// NSGetReviewsByIDResponse output the selected reviews
-type NSGetReviewsByIDResponse struct {
-	Reviews []Review
-	Err     error
-}
-
-// Endpoints wrap the Neural Style Service
-type Endpoints struct {
-	NSEndpoint                endpoint.Endpoint
-	NSPreviewEndpoint         endpoint.Endpoint
-	NSContentUploadEndpoint   endpoint.Endpoint
-	NSStyleUploadEndpoint     endpoint.Endpoint
-	NSGetProductsEndpoint     endpoint.Endpoint
-	NSGetProductsByIDEndpoint endpoint.Endpoint
-	NSGetReviewsByIDEndpoint  endpoint.Endpoint
 }
 
 // MakeNSEndpoint generate style transfer endpoint
@@ -83,49 +40,5 @@ func MakeNSPreviewEndpoint(svc Service) endpoint.Endpoint {
 		req := request.(NSPreviewRequest)
 		output, err := svc.StyleTransferPreview(req.Content, req.Style)
 		return NSResponse{Err: err, Output: output}, err
-	}
-}
-
-// MakeNSContentUploadEndpoint upload the content file
-func MakeNSContentUploadEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSUploadRequest)
-		prod, err := svc.UploadContentFile(req.ProductData)
-		return NSGetProductResponse{Target: prod, Err: err}, err
-	}
-}
-
-// MakeNSStyleUploadEndpoint upload the style file
-func MakeNSStyleUploadEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSUploadRequest)
-		prod, err := svc.UploadStyleFile(req.ProductData)
-		return NSGetProductResponse{Target: prod, Err: err}, err
-	}
-}
-
-// MakeNSGetProductsEndpoint get all the transfered file
-func MakeNSGetProductsEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		output, err := svc.GetProducts()
-		return NSGetProductsResponse{Products: output, Err: err}, err
-	}
-}
-
-// MakeNSGetProductByIDEndpoint get the selected product by id
-func MakeNSGetProductByIDEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSGetProductByIDRequest)
-		prod, err := svc.GetProductsByID(req.ID)
-		return NSGetProductResponse{Target: prod, Err: err}, err
-	}
-}
-
-// MakeNSGetReviewsByIDEndpoint get the selected reviews by id
-func MakeNSGetReviewsByIDEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSGetReviewsByIDRequest)
-		reviews, err := svc.GetReviewsByProductID(req.ID)
-		return NSGetReviewsByIDResponse{Reviews: reviews, Err: err}, err
 	}
 }

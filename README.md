@@ -14,6 +14,8 @@
 		go get github.com/go-stack/stack
 		
 		go get gopkg.in/mgo.v2
+		
+		go get github.com/dgrijalva/jwt-go
 			
 	 (2) Define the local GOPATH environment for the go build
 	 
