@@ -19,7 +19,7 @@ type AwsImageStore struct {
 }
 
 // Save image on aws-s3
-func (svc *AwsImageStore) Save(img *Image) error {
+func (svc AwsImageStore) Save(img *Image) error {
 	// Initialize a session that the SDK uses to load
 	// credentials from the shared credentials file ~/.aws/credentials
 	// and region from the shared configuration file ~/.aws/config.
@@ -98,12 +98,12 @@ func (svc *AwsImageStore) Save(img *Image) error {
 }
 
 // Find the selected image from id
-func (svc *AwsImageStore) Find(userID, fileName string) (string, error) {
+func (svc AwsImageStore) Find(userID, fileName string) (string, error) {
 	return "", nil
 }
 
 // FindAllByUser return all the image for a selected user
-func (svc *AwsImageStore) FindAllByUser(userID string) ([]string, error) {
+func (svc AwsImageStore) FindAllByUser(userID string) ([]string, error) {
 
 	return nil, nil
 }

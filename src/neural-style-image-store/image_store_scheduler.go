@@ -43,7 +43,9 @@ func NewWorker(workerPool chan chan Image) Worker {
 	return Worker{
 		WorkerPool: workerPool,
 		JobChannel: make(chan Image),
-		quit:       make(chan bool)}
+		quit:       make(chan bool),
+		Store:      NewAzureImageStore(),
+	}
 }
 
 // Start method starts the run loop for the worker, listening for a quit channel in

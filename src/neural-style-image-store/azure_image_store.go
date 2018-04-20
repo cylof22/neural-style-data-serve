@@ -12,6 +12,12 @@ import (
 	"github.com/Azure/azure-storage-blob-go/2016-05-31/azblob"
 )
 
+var (
+	azStorageAccount = os.Getenv("AZURE_STORAGE_ACCOUNT")
+	azStorageKey     = os.Getenv("AZURE_STORAGE_KEY")
+	azStorageURL     = os.Getenv("AZURE_STORAGE_URL")
+)
+
 // In Global the StorageURL is .blob.core.windows.net
 // In China the StorageURL is .blob.core.chinacloudapi.cn
 
@@ -22,8 +28,17 @@ type AzureImageStore struct {
 	StorageURL     string
 }
 
+// NewAzureImageStore create the default azure image storage
+func NewAzureImageStore() AzureImageStore {
+	return AzureImageStore{
+		StorageAccount: azStorageAccount,
+		StorageKey:     azStorageKey,
+		StorageURL:     azStorageURL,
+	}
+}
+
 // Save image on azure storage
-func (svc *AzureImageStore) Save(img Image) error {
+func (svc AzureImageStore) Save(img Image) error {
 	// Create a default request pipeline using your storage account name and account key.
 	credential := azblob.NewSharedKeyCredential(svc.StorageAccount, svc.StorageKey)
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
@@ -59,7 +74,7 @@ func (svc *AzureImageStore) Save(img Image) error {
 }
 
 // Find the selected image from id
-func (svc *AzureImageStore) Find(userID, fileName string) (string, error) {
+func (svc AzureImageStore) Find(userID, fileName string) (string, error) {
 	credential := azblob.NewSharedKeyCredential(svc.StorageAccount, svc.StorageKey)
 
 	// return the blob url for the end user
@@ -84,7 +99,7 @@ func (svc *AzureImageStore) Find(userID, fileName string) (string, error) {
 }
 
 // FindAllByUser return all the image for a selected user
-func (svc *AzureImageStore) FindAllByUser(userID string) ([]string, error) {
+func (svc AzureImageStore) FindAllByUser(userID string) ([]string, error) {
 	var blobsURL []string
 
 	credential := azblob.NewSharedKeyCredential(svc.StorageAccount, svc.StorageKey)
@@ -97,6 +112,7 @@ func (svc *AzureImageStore) FindAllByUser(userID string) ([]string, error) {
 	containerURL := azblob.NewContainerURL(*URL, p)
 
 	for marker := (azblob.Marker{}); marker.NotDone(); {
+		ctx := context.Background()
 		// Get a result segment starting with the blob indicated by the current Marker.
 		listBlob, err := containerURL.ListBlobs(ctx, marker, azblob.ListBlobsOptions{})
 
@@ -116,20 +132,19 @@ func (svc *AzureImageStore) FindAllByUser(userID string) ([]string, error) {
 
 			qp := sasQueryParams.Encode()
 			if len(qp) == 0 {
-				return "", errors.New(fileName + "doesn't exist")
+				return nil, errors.New(userID + "doesn't exist")
 			}
 
 			publicblobURL := "https://%s" + svc.StorageURL + "?%s"
 			publicblobURL = fmt.Sprintf(publicblobURL, svc.StorageAccount, qp)
 
-			append(blobsURL, publicblobURL)
+			blobsURL = append(blobsURL, publicblobURL)
 		}
 	}
-	
+
 	if len(blobsURL) != 0 {
 		return blobsURL, nil
 	}
-	else {
-		return nil, errors.New("Unknow user")
-	}
+
+	return nil, errors.New("Unknow user")
 }
