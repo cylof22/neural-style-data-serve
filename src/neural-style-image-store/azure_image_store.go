@@ -115,6 +115,9 @@ func (svc AzureImageStore) FindAllByUser(userID string) ([]string, error) {
 		ctx := context.Background()
 		// Get a result segment starting with the blob indicated by the current Marker.
 		listBlob, err := containerURL.ListBlobs(ctx, marker, azblob.ListBlobsOptions{})
+		if err != nil {
+			return nil, err
+		}
 
 		// ListBlobs returns the start of the next segment; you MUST use this to get
 		// the next segment (after processing the current result segment).
