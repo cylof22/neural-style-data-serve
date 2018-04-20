@@ -13,13 +13,13 @@ var (
 )
 
 // JobQueue A buffered channel that we can send work requests on.
-var JobQueue chan ImageStore
+var JobQueue chan Image
 
 func init() {
 	queueSize, _ := strconv.Atoi(MaxQueue)
 	workerSize, _ := strconv.Atoi(MaxWorker)
 
-	JobQueue = make(chan ImageStore, queueSize)
+	JobQueue = make(chan Image, queueSize)
 
 	storeDispatcher := NewDispatcher(workerSize)
 	storeDispatcher.Run()
@@ -29,17 +29,20 @@ func init() {
 // Worker represents the worker that executes the job
 type Worker struct {
 	// WorkerPool define the worker load
-	WorkerPool chan chan ImageStore
+	WorkerPool chan chan Image
 	// JobChannel define the job cache channel
-	JobChannel chan ImageStore
+	JobChannel chan Image
 	quit       chan bool
+
+	// ImageStore service
+	Store AzureImageStore
 }
 
 // NewWorker generate the new worker
-func NewWorker(workerPool chan chan ImageStore) Worker {
+func NewWorker(workerPool chan chan Image) Worker {
 	return Worker{
 		WorkerPool: workerPool,
-		JobChannel: make(chan ImageStore),
+		JobChannel: make(chan Image),
 		quit:       make(chan bool)}
 }
 
@@ -52,10 +55,10 @@ func (w Worker) Start() {
 			w.WorkerPool <- w.JobChannel
 
 			select {
-			case imgStore := <-w.JobChannel:
+			case img := <-w.JobChannel:
 				// we have received a work request.
-				if err := imgStore.Save(nil); err != nil {
-
+				if err := w.Store.Save(img); err != nil {
+					// Todo: log the failed operation
 				}
 
 			case <-w.quit:
@@ -76,13 +79,13 @@ func (w Worker) Stop() {
 // Dispatcher job schedule
 type Dispatcher struct {
 	// A pool of workers channels that are registered with the dispatcher
-	WorkerPool chan chan ImageStore
+	WorkerPool chan chan Image
 	maxWorker  int
 }
 
 // NewDispatcher configure the size of Dispatcher
 func NewDispatcher(maxWorkerSize int) *Dispatcher {
-	pool := make(chan chan ImageStore, maxWorkerSize)
+	pool := make(chan chan Image, maxWorkerSize)
 	return &Dispatcher{WorkerPool: pool, maxWorker: maxWorkerSize}
 }
 
@@ -102,7 +105,7 @@ func (d *Dispatcher) dispatch() {
 		select {
 		case job := <-JobQueue:
 			// a job request has been received
-			go func(job ImageStore) {
+			go func(job Image) {
 				// try to obtain a worker job channel that is available.
 				// this will block until a worker is idle
 				jobChannel := <-d.WorkerPool

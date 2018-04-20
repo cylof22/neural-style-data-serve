@@ -23,7 +23,7 @@ type AzureImageStore struct {
 }
 
 // Save image on azure storage
-func (svc *AzureImageStore) Save(img *Image) error {
+func (svc *AzureImageStore) Save(img Image) error {
 	// Create a default request pipeline using your storage account name and account key.
 	credential := azblob.NewSharedKeyCredential(svc.StorageAccount, svc.StorageKey)
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
