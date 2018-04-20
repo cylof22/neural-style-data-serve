@@ -85,5 +85,51 @@ func (svc *AzureImageStore) Find(userID, fileName string) (string, error) {
 
 // FindAllByUser return all the image for a selected user
 func (svc *AzureImageStore) FindAllByUser(userID string) ([]string, error) {
-	return nil, nil
+	var blobsURL []string
+
+	credential := azblob.NewSharedKeyCredential(svc.StorageAccount, svc.StorageKey)
+	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
+
+	blobURL := "https://" + "%s" + svc.StorageURL + "/%s"
+	blobURL = fmt.Sprintf(blobURL, svc.StorageAccount, userID)
+	URL, _ := url.Parse(blobURL)
+
+	containerURL := azblob.NewContainerURL(*URL, p)
+
+	for marker := (azblob.Marker{}); marker.NotDone(); {
+		// Get a result segment starting with the blob indicated by the current Marker.
+		listBlob, err := containerURL.ListBlobs(ctx, marker, azblob.ListBlobsOptions{})
+
+		// ListBlobs returns the start of the next segment; you MUST use this to get
+		// the next segment (after processing the current result segment).
+		marker = listBlob.NextMarker
+
+		// Process the blobs returned in this result segment (if the segment is empty, the loop body won't execute)
+		for _, blobInfo := range listBlob.Blobs.Blob {
+			sasQueryParams := azblob.BlobSASSignatureValues{
+				Protocol:      azblob.SASProtocolHTTPS,
+				ExpiryTime:    time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
+				Permissions:   azblob.AccountSASPermissions{Read: true}.String(),
+				ContainerName: userID,
+				BlobName:      blobInfo.Name,
+			}.NewSASQueryParameters(credential)
+
+			qp := sasQueryParams.Encode()
+			if len(qp) == 0 {
+				return "", errors.New(fileName + "doesn't exist")
+			}
+
+			publicblobURL := "https://%s" + svc.StorageURL + "?%s"
+			publicblobURL = fmt.Sprintf(publicblobURL, svc.StorageAccount, qp)
+
+			append(blobsURL, publicblobURL)
+		}
+	}
+	
+	if len(blobsURL) != 0 {
+		return blobsURL, nil
+	}
+	else {
+		return nil, errors.New("Unknow user")
+	}
 }
