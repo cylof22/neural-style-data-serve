@@ -15,15 +15,25 @@ var (
 // JobQueue A buffered channel that we can send work requests on.
 var JobQueue chan Image
 
+// Done closed channel
+var Done chan interface{}
+
 func init() {
-	queueSize, _ := strconv.Atoi(MaxQueue)
-	workerSize, _ := strconv.Atoi(MaxWorker)
+	queueSize, err := strconv.Atoi(MaxQueue)
+	if err != nil {
+		queueSize = 1
+	}
+
+	workerSize, err := strconv.Atoi(MaxWorker)
+	if err != nil {
+		workerSize = 1
+	}
 
 	JobQueue = make(chan Image, queueSize)
+	Done = make(chan interface{})
 
 	storeDispatcher := NewDispatcher(workerSize)
 	storeDispatcher.Run()
-	storeDispatcher.dispatch()
 }
 
 // Worker represents the worker that executes the job
@@ -62,9 +72,9 @@ func (w Worker) Start() {
 				if err := w.Store.Save(img); err != nil {
 					// Todo: log the failed operation
 				}
-
 			case <-w.quit:
 				// we have received a signal to stop
+				close(w.JobChannel)
 				return
 			}
 		}
@@ -83,6 +93,7 @@ type Dispatcher struct {
 	// A pool of workers channels that are registered with the dispatcher
 	WorkerPool chan chan Image
 	maxWorker  int
+	workers    []Worker
 }
 
 // NewDispatcher configure the size of Dispatcher
@@ -97,6 +108,7 @@ func (d *Dispatcher) Run() {
 	for i := 0; i < d.maxWorker; i++ {
 		worker := NewWorker(d.WorkerPool)
 		worker.Start()
+		d.workers = append(d.workers, worker)
 	}
 
 	go d.dispatch()
@@ -105,16 +117,24 @@ func (d *Dispatcher) Run() {
 func (d *Dispatcher) dispatch() {
 	for {
 		select {
-		case job := <-JobQueue:
+		case <-Done:
+			// Stop the worker
+			for _, w := range d.workers {
+				w.Stop()
+			}
+
+			close(JobQueue)
+			return
+		default:
+			img := <-JobQueue
 			// a job request has been received
 			go func(job Image) {
 				// try to obtain a worker job channel that is available.
 				// this will block until a worker is idle
 				jobChannel := <-d.WorkerPool
-
 				// dispatch the job to the worker job channel
 				jobChannel <- job
-			}(job)
+			}(img)
 		}
 	}
 }
