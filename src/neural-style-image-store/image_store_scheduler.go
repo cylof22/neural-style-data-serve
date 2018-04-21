@@ -21,12 +21,12 @@ var Done chan interface{}
 func init() {
 	queueSize, err := strconv.Atoi(MaxQueue)
 	if err != nil {
-		queueSize = 1
+		queueSize = 2
 	}
 
 	workerSize, err := strconv.Atoi(MaxWorker)
 	if err != nil {
-		workerSize = 1
+		workerSize = 2
 	}
 
 	JobQueue = make(chan Image, queueSize)
@@ -125,8 +125,7 @@ func (d *Dispatcher) dispatch() {
 
 			close(JobQueue)
 			return
-		default:
-			img := <-JobQueue
+		case img := <-JobQueue:
 			// a job request has been received
 			go func(job Image) {
 				// try to obtain a worker job channel that is available.
