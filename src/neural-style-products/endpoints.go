@@ -11,6 +11,10 @@ type NSUploadRequest struct {
 	ProductData Product
 }
 
+type NSQueryRequest struct {
+	QueryData QueryParams
+}
+
 // NSGetProductsResponse output the json response
 type NSGetProductsResponse struct {
 	Products []Product
@@ -66,7 +70,8 @@ func MakeNSStyleUploadEndpoint(svc Service) endpoint.Endpoint {
 // MakeNSGetProductsEndpoint get all the transfered file
 func MakeNSGetProductsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		output, err := svc.GetProducts()
+		req := request.(NSQueryRequest)
+		output, err := svc.GetProducts(req.QueryData)
 		return NSGetProductsResponse{Products: output, Err: err}, err
 	}
 }
