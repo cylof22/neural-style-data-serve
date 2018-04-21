@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 
 	"neural-style-util"
 
@@ -44,7 +45,12 @@ func encodeNSUploadStyleResponse(ctx context.Context, w http.ResponseWriter, res
 }
 
 func decodeNSGetProductsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	return nil, nil
+	queryData, _ := url.ParseQuery(r.URL.RawQuery)
+	queryBytes, _ := json.Marshal(queryData)
+
+	var params QueryParams
+	json.Unmarshal(queryBytes, &params)
+	return NSQueryRequest{QueryData:params}, nil
 }
 
 func encodeNSGetProductsResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
