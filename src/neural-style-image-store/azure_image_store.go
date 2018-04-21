@@ -53,10 +53,27 @@ func (svc AzureImageStore) Save(img Image) error {
 
 	// Create the container
 	ctx := context.Background() // This example uses a never-expiring context
-	_, err := containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
+	_, err := containerURL.GetPermissions(ctx, azblob.LeaseAccessConditions{})
+	if err != nil {
+		if serr, ok := err.(azblob.StorageError); ok {
+			switch serr.ServiceCode() {
+			case azblob.ServiceCodeContainerNotFound:
+			case azblob.ServiceCodeContainerBeingDeleted:
+				_, err := containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
+				if err != nil {
+					fmt.Println("Failed to create the container" + err.Error())
+				}
+				return err
+			case azblob.ServiceCodeContainerDisabled:
+				fmt.Println("No access right")
+				errInfo := fmt.Sprintf("The %s is forbidden", img.UserID)
+				return errors.New(errInfo)
+			}
+		}
+	}
 
 	// add the image file as a blob to the container
-	imgBlobURL := containerURL.NewBlockBlobURL(filepath.Ext(img.Location))
+	imgBlobURL := containerURL.NewBlockBlobURL(filepath.Base(img.Location))
 	file, err := os.Open(img.ParentPath + img.Location)
 
 	// The high-level API UploadFileToBlockBlob function uploads blocks in parallel for optimal performance, and
