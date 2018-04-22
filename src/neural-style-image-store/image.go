@@ -15,6 +15,7 @@ type Image struct {
 	UserID     string
 	Location   string
 	ParentPath string
+	ImageID    string
 }
 
 // UploadResult define the basic inforation after the image is uploaded to the cloud storage
@@ -26,6 +27,7 @@ type UploadResult struct {
 	Location       string
 	StorageAccount string
 	StorageKey     string
+	ImageID        string
 }
 
 var mimeExtensions = map[string]string{

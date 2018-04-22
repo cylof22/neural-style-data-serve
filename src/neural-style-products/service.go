@@ -86,10 +86,9 @@ func uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
 	img := ImageStoreService.Image{
 		UserID:   owner,
 		Location: outfilePath,
+		ImageID:  picID,
 	}
 	ImageStoreService.JobQueue <- img
-
-	// Todo: How to get the public URL for the stored image
 
 	newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
 	fmt.Println("New picuture is created: " + newImageURL)
@@ -116,8 +115,8 @@ func (svc ProductService) UploadStyleFile(productData Product) (Product, error) 
 	imageID := NSUtil.UniqueID()
 	newImageURL, err := uploadPicutre(productData.Owner, productData.URL, imageID, "styles")
 
-	// Todo: Listen the ImageStoreService UploadResult Channel and add the upload result to the
-	// Product database
+	// The product's URL is a cached local image url, it will be updated by listening the ImageStoreService
+	// UploadResult Channel asychonously
 	newProduct := Product{ID: imageID}
 	if err != nil {
 		fmt.Println(err)

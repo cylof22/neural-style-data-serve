@@ -91,6 +91,7 @@ func (w Worker) Start() {
 					UserID:   img.UserID,
 					Name:     filepath.Base(img.Location),
 					Location: fileURL,
+					ImageID:  img.ImageID,
 				}
 			case <-w.quit:
 				// we have received a signal to stop
