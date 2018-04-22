@@ -2,6 +2,7 @@ package ImageStoreService
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 )
 
@@ -10,10 +11,15 @@ var (
 	MaxWorker = os.Getenv("MAX_WORKERS")
 	// MaxQueue define the size of the cache queue
 	MaxQueue = os.Getenv("MAX_QUEUE")
+	// MaxResultQueue define the size of the cached result queue
+	MaxResultQueue = os.Getenv("MAX_RESULT_QUEUE")
 )
 
 // JobQueue A buffered channel that we can send work requests on.
 var JobQueue chan Image
+
+// UploadResultQueue A buffered channel that send back the upload result
+var UploadResultQueue chan UploadResult
 
 // Done closed channel
 var Done chan interface{}
@@ -29,7 +35,13 @@ func init() {
 		workerSize = 2
 	}
 
+	resultQueueSize, err := strconv.Atoi(MaxResultQueue)
+	if err != nil {
+		resultQueueSize = 2
+	}
+
 	JobQueue = make(chan Image, queueSize)
+	UploadResultQueue = make(chan UploadResult, resultQueueSize)
 	Done = make(chan interface{})
 
 	storeDispatcher := NewDispatcher(workerSize)
@@ -69,8 +81,16 @@ func (w Worker) Start() {
 			select {
 			case img := <-w.JobChannel:
 				// we have received a work request.
-				if err := w.Store.Save(img); err != nil {
+				var fileURL string
+				fileURL, err := w.Store.Save(img)
+				if err != nil {
 					// Todo: log the failed operation
+				}
+
+				UploadResultQueue <- UploadResult{
+					UserID:   img.UserID,
+					Name:     filepath.Base(img.Location),
+					Location: fileURL,
 				}
 			case <-w.quit:
 				// we have received a signal to stop

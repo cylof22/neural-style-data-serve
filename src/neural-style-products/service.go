@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"neural-style-image-store"
 	"path"
 	"strings"
 
@@ -65,7 +66,7 @@ type ProductService struct {
 }
 
 // upload picture file
-func uploadPicutre(picData string, picID string, picFolder string) (string, error) {
+func uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
 	if strings.HasPrefix(picData, "http") {
 		return picData, nil
 	}
@@ -81,6 +82,15 @@ func uploadPicutre(picData string, picID string, picFolder string) (string, erro
 		return "", err
 	}
 
+	// upload file to the azure storage
+	img := ImageStoreService.Image{
+		UserID:   owner,
+		Location: outfilePath,
+	}
+	ImageStoreService.JobQueue <- img
+
+	// Todo: How to get the public URL for the stored image
+
 	newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
 	fmt.Println("New picuture is created: " + newImageURL)
 	return newImageURL, nil
@@ -89,7 +99,7 @@ func uploadPicutre(picData string, picID string, picFolder string) (string, erro
 // UploadContentFile upload content file to the cloud storage
 func (svc ProductService) UploadContentFile(productData Product) (Product, error) {
 	imageID := NSUtil.UniqueID()
-	newImageURL, err := uploadPicutre(productData.URL, imageID, "contents")
+	newImageURL, err := uploadPicutre(productData.Owner, productData.URL, imageID, "contents")
 
 	newContent := Product{ID: imageID}
 	if err != nil {
@@ -104,8 +114,10 @@ func (svc ProductService) UploadContentFile(productData Product) (Product, error
 // UploadStyleFile upload style file to the cloud storage
 func (svc ProductService) UploadStyleFile(productData Product) (Product, error) {
 	imageID := NSUtil.UniqueID()
-	newImageURL, err := uploadPicutre(productData.URL, imageID, "styles")
+	newImageURL, err := uploadPicutre(productData.Owner, productData.URL, imageID, "styles")
 
+	// Todo: Listen the ImageStoreService UploadResult Channel and add the upload result to the
+	// Product database
 	newProduct := Product{ID: imageID}
 	if err != nil {
 		fmt.Println(err)

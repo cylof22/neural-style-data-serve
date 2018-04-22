@@ -17,6 +17,17 @@ type Image struct {
 	ParentPath string
 }
 
+// UploadResult define the basic inforation after the image is uploaded to the cloud storage
+// The StorageAccount and Storage Key is special for the Azure cloud storage, No such conception for AWS S3 now.
+// Todo: How to the store the two value safely in the database
+type UploadResult struct {
+	UserID         string
+	Name           string
+	Location       string
+	StorageAccount string
+	StorageKey     string
+}
+
 var mimeExtensions = map[string]string{
 	"image/png":  ".png",
 	"image/jpeg": ".jpg",
