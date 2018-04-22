@@ -41,3 +41,5 @@ debug
 .vs/VSWorkspaceState.json
 .vs/GoNetwork/v15/.suo
 .vs/GoNetwork/v15/Browse.VC.db
+.vscode/launch.json
+.vscode/settings.json
