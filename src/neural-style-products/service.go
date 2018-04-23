@@ -244,3 +244,33 @@ func (svc *ProductService) GetHotestArtists() ([]Artist, error) {
 
 	return artists, nil
 }
+
+// UpdateProductDBService update the backend database by accept channel message
+type UpdateProductDBService struct {
+	Session *mgo.Session
+}
+
+// NewUpdateProductDBSVC create a new background update service
+func NewUpdateProductDBSVC(session *mgo.Session) *UpdateProductDBService {
+	return &UpdateProductDBService{Session: session}
+}
+
+// Run update the database through the channel
+func (svc *UpdateProductDBService) Run() {
+	go func() {
+		for {
+			select {
+			case updateInfo := <-ImageStoreService.UploadResultQueue:
+				// check the database
+				session := svc.Session.Copy()
+				defer session.Close()
+
+				c := session.DB("store").C("products")
+				err := c.Update(bson.M{"id": updateInfo.ImageID}, bson.M{"url": updateInfo.Location})
+				if err != nil {
+					fmt.Println(err.Error())
+				}
+			}
+		}
+	}()
+}

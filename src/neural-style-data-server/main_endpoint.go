@@ -40,6 +40,10 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	productService := ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort, dbSession)
 	r = ProductService.MakeHTTPHandler(ctx, r, productService, options...)
 
+	// Database background update service
+	dbUpdateService := ProductService.NewUpdateProductDBSVC(dbSession)
+	dbUpdateService.Run()
+
 	// User service
 	userService := UserService.NewUserSVC(*serverURL, *serverPort, dbSession)
 	r = UserService.MakeHTTPHandler(ctx, r, userService, options...)
