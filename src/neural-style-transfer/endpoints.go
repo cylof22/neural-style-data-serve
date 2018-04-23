@@ -26,7 +26,7 @@ type NSResponse struct {
 }
 
 // MakeNSEndpoint generate style transfer endpoint
-func MakeNSEndpoint(svc Service) endpoint.Endpoint {
+func MakeNSEndpoint(svc *NeuralTransferService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSRequest)
 		output, err := svc.StyleTransfer(req.Content, req.Style, req.Iterations)
@@ -35,7 +35,7 @@ func MakeNSEndpoint(svc Service) endpoint.Endpoint {
 }
 
 // MakeNSPreviewEndpoint generate the style transfer preview endpoint
-func MakeNSPreviewEndpoint(svc Service) endpoint.Endpoint {
+func MakeNSPreviewEndpoint(svc *NeuralTransferService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSPreviewRequest)
 		output, err := svc.StyleTransferPreview(req.Content, req.Style)

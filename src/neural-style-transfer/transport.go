@@ -39,7 +39,7 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // MakeHTTPHandler generate the http handler for the style service handler
-func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc Service, options ...httptransport.ServerOption) *mux.Router {
+func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc *NeuralTransferService, options ...httptransport.ServerOption) *mux.Router {
 	//GET /styleTransfer/{content}/{style}/{iterations}
 	r.Methods("GET").Path("/styleTransfer").Queries("content", "{content}", "style", "{style}", "iterations", "{iterations:[0-9]+}").Handler(NSUtil.AuthMiddleware(httptransport.NewServer(
 		MakeNSEndpoint(svc),

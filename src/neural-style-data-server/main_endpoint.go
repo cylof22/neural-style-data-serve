@@ -9,12 +9,12 @@ import (
 
 	"neural-style-user"
 
+	"neural-style-transfer"
+
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	mgo "gopkg.in/mgo.v2"
-
-	"neural-style-transfer"
 )
 
 func encodeError(ctx context.Context, err error, w http.ResponseWriter) {
@@ -32,32 +32,16 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	}
 
 	// Style Service
-	styleTransferService := StyleService.NeuralTransferService{
-		NetworkPath:        *networkPath,
-		PreviewNetworkPath: *previewNetworkPath,
-		OutputPath:         *outputPath,
-		Host:               *serverURL,
-		Port:               *serverPort,
-		Session:            dbSession,
-	}
+	styleTransferService := StyleService.NewNeuralTransferSVC(*networkPath, *previewNetworkPath,
+		*outputPath, *serverURL, *serverPort)
 	r = StyleService.MakeHTTPHandler(ctx, r, styleTransferService, options...)
 
 	// Product service
-	productService := ProductService.ProductService{
-		OutputPath: *outputPath,
-		Host:       *serverURL,
-		Port:       *serverPort,
-		Session:    dbSession,
-	}
-
+	productService := ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort, dbSession)
 	r = ProductService.MakeHTTPHandler(ctx, r, productService, options...)
 
 	// User service
-	userService := UserService.UserService{
-		Host:    *serverURL,
-		Port:    *serverPort,
-		Session: dbSession,
-	}
+	userService := UserService.NewUserSVC(*serverURL, *serverPort, dbSession)
 	r = UserService.MakeHTTPHandler(ctx, r, userService, options...)
 
 	return r

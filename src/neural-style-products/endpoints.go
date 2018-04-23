@@ -46,7 +46,7 @@ type NSGetArtistsResponse struct {
 }
 
 // MakeNSContentUploadEndpoint upload the content file
-func MakeNSContentUploadEndpoint(svc Service) endpoint.Endpoint {
+func MakeNSContentUploadEndpoint(svc *ProductService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSUploadRequest)
 		prod, err := svc.UploadContentFile(req.ProductData)
@@ -55,7 +55,7 @@ func MakeNSContentUploadEndpoint(svc Service) endpoint.Endpoint {
 }
 
 // MakeNSStyleUploadEndpoint upload the style file
-func MakeNSStyleUploadEndpoint(svc Service) endpoint.Endpoint {
+func MakeNSStyleUploadEndpoint(svc *ProductService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSUploadRequest)
 		prod, err := svc.UploadStyleFile(req.ProductData)
@@ -64,7 +64,7 @@ func MakeNSStyleUploadEndpoint(svc Service) endpoint.Endpoint {
 }
 
 // MakeNSGetProductsEndpoint get all the transfered file
-func MakeNSGetProductsEndpoint(svc Service) endpoint.Endpoint {
+func MakeNSGetProductsEndpoint(svc *ProductService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		output, err := svc.GetProducts()
 		return NSGetProductsResponse{Products: output, Err: err}, err
@@ -72,7 +72,7 @@ func MakeNSGetProductsEndpoint(svc Service) endpoint.Endpoint {
 }
 
 // MakeNSGetProductByIDEndpoint get the selected product by id
-func MakeNSGetProductByIDEndpoint(svc Service) endpoint.Endpoint {
+func MakeNSGetProductByIDEndpoint(svc *ProductService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSGetProductByIDRequest)
 		prod, err := svc.GetProductsByID(req.ID)
@@ -81,7 +81,7 @@ func MakeNSGetProductByIDEndpoint(svc Service) endpoint.Endpoint {
 }
 
 // MakeNSGetReviewsByIDEndpoint get the selected reviews by id
-func MakeNSGetReviewsByIDEndpoint(svc Service) endpoint.Endpoint {
+func MakeNSGetReviewsByIDEndpoint(svc *ProductService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSGetReviewsByIDRequest)
 		reviews, err := svc.GetReviewsByProductID(req.ID)
@@ -90,7 +90,7 @@ func MakeNSGetReviewsByIDEndpoint(svc Service) endpoint.Endpoint {
 }
 
 // MakeNSGetArtists generate the endpoint for get hotest artists
-func MakeNSGetArtists(svc Service) endpoint.Endpoint {
+func MakeNSGetArtists(svc *ProductService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		artists, err := svc.GetArtists()
 		return NSGetArtistsResponse{Artists: artists, Err: err}, err
@@ -98,7 +98,7 @@ func MakeNSGetArtists(svc Service) endpoint.Endpoint {
 }
 
 // MakeNSGetHotestArtists generate the endpoint for getting hotest artists
-func MakeNSGetHotestArtists(svc Service) endpoint.Endpoint {
+func MakeNSGetHotestArtists(svc *ProductService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		hotestArtists, err := svc.GetHotestArtists()
 		return NSGetArtistsResponse{Artists: hotestArtists, Err: err}, err

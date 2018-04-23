@@ -27,12 +27,6 @@ type UserToken struct {
 	Token string `json:"token"`
 }
 
-// Service define the basic interface for a service
-type Service interface {
-	Register(userData UserInfo) (string, error)
-	Login(loginData UserInfo) (UserToken, error)
-}
-
 // UserService for user login service
 type UserService struct {
 	Host    string
@@ -40,8 +34,13 @@ type UserService struct {
 	Session *mgo.Session
 }
 
+// NewUserSVC create a new user service
+func NewUserSVC(host, port string, session *mgo.Session) *UserService {
+	return &UserService{Host: host, Port: port, Session: session}
+}
+
 // Register create a new user
-func (svc UserService) Register(userData UserInfo) (string, error) {
+func (svc *UserService) Register(userData UserInfo) (string, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
@@ -67,7 +66,7 @@ func (svc UserService) Register(userData UserInfo) (string, error) {
 }
 
 // Login login the style transfer platform
-func (svc UserService) Login(loginData UserInfo) (UserToken, error) {
+func (svc *UserService) Login(loginData UserInfo) (UserToken, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 

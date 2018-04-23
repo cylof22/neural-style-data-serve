@@ -46,17 +46,6 @@ type Artist struct {
 	ModelName   string `json:"modelname"`
 }
 
-// Service for neural style transfer service
-type Service interface {
-	UploadContentFile(productData Product) (Product, error)
-	UploadStyleFile(productData Product) (Product, error)
-	GetProducts() ([]Product, error)
-	GetProductsByID(id string) (Product, error)
-	GetReviewsByProductID(id string) ([]Review, error)
-	GetArtists() ([]Artist, error)
-	GetHotestArtists() ([]Artist, error)
-}
-
 // ProductService for final image style transfer
 type ProductService struct {
 	OutputPath string
@@ -65,12 +54,13 @@ type ProductService struct {
 	Session    *mgo.Session
 }
 
+// NewProductSVC create a new product service
+func NewProductSVC(outputPath, host, port string, session *mgo.Session) *ProductService {
+	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session}
+}
+
 // upload picture file
 func uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
-	if strings.HasPrefix(picData, "http") {
-		return picData, nil
-	}
-
 	outfileName := picID + ".png"
 	outfilePath := path.Join("./data", picFolder, outfileName)
 
@@ -96,7 +86,7 @@ func uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
 }
 
 // UploadContentFile upload content file to the cloud storage
-func (svc ProductService) UploadContentFile(productData Product) (Product, error) {
+func (svc *ProductService) UploadContentFile(productData Product) (Product, error) {
 	imageID := NSUtil.UniqueID()
 	newImageURL, err := uploadPicutre(productData.Owner, productData.URL, imageID, "contents")
 
@@ -111,7 +101,7 @@ func (svc ProductService) UploadContentFile(productData Product) (Product, error
 }
 
 // UploadStyleFile upload style file to the cloud storage
-func (svc ProductService) UploadStyleFile(productData Product) (Product, error) {
+func (svc *ProductService) UploadStyleFile(productData Product) (Product, error) {
 	imageID := NSUtil.UniqueID()
 	newImageURL, err := uploadPicutre(productData.Owner, productData.URL, imageID, "styles")
 
@@ -141,7 +131,7 @@ func (svc ProductService) UploadStyleFile(productData Product) (Product, error) 
 	return newProduct, nil
 }
 
-func (svc ProductService) addProduct(product Product) error {
+func (svc *ProductService) addProduct(product Product) error {
 	session := svc.Session.Copy()
 	defer session.Close()
 
@@ -159,7 +149,7 @@ func (svc ProductService) addProduct(product Product) error {
 }
 
 // GetProducts find all the generated products(images)
-func (svc ProductService) GetProducts() ([]Product, error) {
+func (svc *ProductService) GetProducts() ([]Product, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
@@ -177,7 +167,7 @@ func (svc ProductService) GetProducts() ([]Product, error) {
 }
 
 // GetProductsByID find the product by id
-func (svc ProductService) GetProductsByID(id string) (Product, error) {
+func (svc *ProductService) GetProductsByID(id string) (Product, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
@@ -197,7 +187,7 @@ func (svc ProductService) GetProductsByID(id string) (Product, error) {
 }
 
 // GetReviewsByProductID find the
-func (svc ProductService) GetReviewsByProductID(id string) ([]Review, error) {
+func (svc *ProductService) GetReviewsByProductID(id string) ([]Review, error) {
 
 	session := svc.Session.Copy()
 	defer session.Close()
@@ -220,7 +210,7 @@ func (svc ProductService) GetReviewsByProductID(id string) ([]Review, error) {
 }
 
 // GetArtists return all the available artists
-func (svc ProductService) GetArtists() ([]Artist, error) {
+func (svc *ProductService) GetArtists() ([]Artist, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
@@ -238,7 +228,7 @@ func (svc ProductService) GetArtists() ([]Artist, error) {
 }
 
 // GetHotestArtists return the active hotest artist
-func (svc ProductService) GetHotestArtists() ([]Artist, error) {
+func (svc *ProductService) GetHotestArtists() ([]Artist, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
