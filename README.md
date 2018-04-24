@@ -21,7 +21,7 @@
 		
 		go get -u github.com/aws/aws-sdk-go
 		
-		go get https://github.com/Azure/azure-storage-blob-go
+		go get github.com/Azure/azure-storage-blob-go
 		
 	 (2) Define the local GOPATH environment for the go build
 	 
