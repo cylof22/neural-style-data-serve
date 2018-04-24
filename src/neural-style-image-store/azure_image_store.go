@@ -58,7 +58,10 @@ func (svc AzureImageStore) Save(img Image) (string, error) {
 	blobName := filepath.Base(img.Location)
 	imgBlobURL := containerURL.NewBlockBlobURL(blobName)
 	file, err := os.Open(img.ParentPath + img.Location)
-
+	if err != nil {
+		fmt.Println(err.Error())
+		return "", err
+	}
 	// The high-level API UploadFileToBlockBlob function uploads blocks in parallel for optimal performance, and
 	// can handle large files as well.
 	// This function calls PutBlock/PutBlockList for files larger 256 MBs, and calls PutBlob for any file smaller
@@ -73,7 +76,7 @@ func (svc AzureImageStore) Save(img Image) (string, error) {
 	sasQueryParams := azblob.BlobSASSignatureValues{
 		Protocol:      azblob.SASProtocolHTTPS,
 		ExpiryTime:    time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
-		Permissions:   azblob.AccountSASPermissions{Read: true}.String(),
+		Permissions:   azblob.BlobSASPermissions{Read: true}.String(),
 		ContainerName: img.UserID,
 		BlobName:      blobName,
 	}.NewSASQueryParameters(credential)
@@ -83,8 +86,8 @@ func (svc AzureImageStore) Save(img Image) (string, error) {
 		return "", errors.New(blobName + "doesn't exist")
 	}
 
-	publicblobURL := "https://%s" + svc.StorageURL + "?%s"
-	publicblobURL = fmt.Sprintf(publicblobURL, svc.StorageAccount, qp)
+	publicblobURL := "https://%s" + svc.StorageURL + "/%s/%s?%s"
+	publicblobURL = fmt.Sprintf(publicblobURL, svc.StorageAccount, img.UserID, blobName, qp)
 
 	return publicblobURL, nil
 }
