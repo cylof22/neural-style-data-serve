@@ -266,8 +266,10 @@ func (svc *UpdateProductDBService) Run() {
 				defer session.Close()
 
 				c := session.DB("store").C("products")
-				err := c.Update(bson.M{"id": updateInfo.ImageID}, bson.M{"url": updateInfo.Location})
+				err := c.Update(bson.M{"id": updateInfo.ImageID}, bson.M{"$set": bson.M{"url": updateInfo.Location}})
 				if err != nil {
+					// Todo: log the update error
+					fmt.Println("Updating failed")
 					fmt.Println(err.Error())
 				}
 			}
