@@ -29,6 +29,11 @@ type Product struct {
 	Categories  []string `json:"categories"`
 }
 
+type QueryParams struct {
+	Categories        []string `json:"categories"`
+	Owner             []string `json:"owner"`
+}
+
 // Review define the basic elements of the review
 type Review struct {
 	ID        uint32 `json:"id"`
@@ -148,15 +153,29 @@ func (svc *ProductService) addProduct(product Product) error {
 	return nil
 }
 
+func getQueryBSon(params QueryParams) bson.M {
+	query := bson.M{}
+	if (params.Categories != nil) {
+		query["categories"] = params.Categories
+	}
+
+	if (params.Owner != nil) {
+		query["owner"] = params.Owner[0]
+	}
+
+	return query
+}
+
 // GetProducts find all the generated products(images)
-func (svc *ProductService) GetProducts() ([]Product, error) {
+func (svc *ProductService) GetProducts(params QueryParams) ([]Product, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
 	c := session.DB("store").C("products")
 
 	var products []Product
-	err := c.Find(bson.M{}).All(&products)
+	query := getQueryBSon(params)
+	err := c.Find(query).All(&products)
 	if err != nil {
 		// Add log information here
 		fmt.Println(err)
