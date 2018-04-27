@@ -128,7 +128,7 @@ func encodeNSGetReviewsByIDResponse(ctx context.Context, w http.ResponseWriter, 
 }
 
 // MakeHTTPHandler generate the http handler for the style service handler
-func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc Service, options ...httptransport.ServerOption) *mux.Router {
+func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc *ProductService, options ...httptransport.ServerOption) *mux.Router {
 	// POST /api/upload/content
 	contentUploadHandler := httptransport.NewServer(
 		MakeNSContentUploadEndpoint(svc),

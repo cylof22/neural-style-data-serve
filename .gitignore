@@ -13,6 +13,13 @@ _test
 bin/data
 bin
 
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
 # Architecture specific extensions/prefixes
 *.[568vq]
 [568vq].out
@@ -34,3 +41,5 @@ debug
 .vs/VSWorkspaceState.json
 .vs/GoNetwork/v15/.suo
 .vs/GoNetwork/v15/Browse.VC.db
+.vscode/launch.json
+.vscode/settings.json

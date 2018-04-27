@@ -16,7 +16,13 @@
 		go get gopkg.in/mgo.v2
 		
 		go get github.com/dgrijalva/jwt-go
-			
+		
+		go get github.com/Azure/azure-pipeline-go
+		
+		go get -u github.com/aws/aws-sdk-go
+		
+		go get github.com/Azure/azure-storage-blob-go
+		
 	 (2) Define the local GOPATH environment for the go build
 	 
 	    export GOPATH="source-code-folder"
