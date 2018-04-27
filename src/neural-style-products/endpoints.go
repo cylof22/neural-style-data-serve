@@ -11,6 +11,14 @@ type NSUploadRequest struct {
 	ProductData Product
 }
 
+type NSStyleUploadRequest struct {
+	ProductData UploadProduct
+}
+
+type NSStylesUploadRequest struct {
+	ProductsData BatchProducts
+}
+
 type NSQueryRequest struct {
 	QueryData QueryParams
 }
@@ -29,6 +37,11 @@ type NSGetProductByIDRequest struct {
 // NSGetProductResponse output the selected product by id
 type NSGetProductResponse struct {
 	Target Product
+	Err    error
+}
+
+type NSUploadProductsResponse struct {
+	Result string
 	Err    error
 }
 
@@ -61,9 +74,18 @@ func MakeNSContentUploadEndpoint(svc Service) endpoint.Endpoint {
 // MakeNSStyleUploadEndpoint upload the style file
 func MakeNSStyleUploadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSUploadRequest)
+		req := request.(NSStyleUploadRequest)
 		prod, err := svc.UploadStyleFile(req.ProductData)
 		return NSGetProductResponse{Target: prod, Err: err}, err
+	}
+}
+
+// MakeNSStylesUploadEndpoint upload the style file
+func MakeNSStylesUploadEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSStylesUploadRequest)
+		res, err := svc.UploadStyleFiles(req.ProductsData)
+		return NSUploadProductsResponse{Result: res, Err: err}, err
 	}
 }
 

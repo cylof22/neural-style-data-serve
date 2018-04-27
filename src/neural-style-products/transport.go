@@ -29,9 +29,9 @@ func encodeNSUploadContentResponse(ctx context.Context, w http.ResponseWriter, r
 }
 
 func decodeNSUploadStyleRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	productData := Product{ID: "1"}
+	productData := UploadProduct{}
 	json.NewDecoder(r.Body).Decode(&productData)
-	return NSUploadRequest{ProductData: productData}, nil
+	return NSStyleUploadRequest{ProductData: productData}, nil
 }
 
 func encodeNSUploadStyleResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
@@ -42,6 +42,22 @@ func encodeNSUploadStyleResponse(ctx context.Context, w http.ResponseWriter, res
 
 	w.Header().Set("context-type", "application/json, charset=utf8")
 	return json.NewEncoder(w).Encode(styleRes.Target)
+}
+
+func decodeNSUploadStylesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	productsData := BatchProducts{}
+	json.NewDecoder(r.Body).Decode(&productsData)
+	return NSStylesUploadRequest{ProductsData: productsData}, nil
+}
+
+func encodeNSUploadStylesResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	uploadRes := response.(NSUploadProductsResponse)
+	if uploadRes.Err != nil {
+		return uploadRes.Err
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(uploadRes.Result)
 }
 
 func decodeNSGetProductsRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -130,6 +146,15 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc Service, options ..
 		options...,
 	)
 	r.Methods("POST").Path("/api/upload/style").Handler(NSUtil.AuthMiddleware(NSUtil.AccessControl(styleUploadHandler)))
+
+	// POST /api/upload/styles
+	stylesUploadHandler := httptransport.NewServer(
+		MakeNSStylesUploadEndpoint(svc),
+		decodeNSUploadStylesRequest,
+		encodeNSUploadStylesResponse,
+		options...,
+	)
+	r.Methods("POST").Path("/api/upload/styles").Handler(NSUtil.AuthMiddleware(NSUtil.AccessControl(stylesUploadHandler)))
 
 	// GET /api/artists
 	r.Methods("GET").Path("/api/artists").Handler(NSUtil.AuthMiddleware(NSUtil.AccessControl(httptransport.NewServer(
