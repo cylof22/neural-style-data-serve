@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"neural-style-image-store"
 	"path"
 	"strings"
 
@@ -50,17 +51,6 @@ type Artist struct {
 	ModelName   string `json:"modelname"`
 }
 
-// Service for neural style transfer service
-type Service interface {
-	UploadContentFile(productData Product) (Product, error)
-	UploadStyleFile(productData Product) (Product, error)
-	GetProducts(params QueryParams) ([]Product, error)
-	GetProductsByID(id string) (Product, error)
-	GetReviewsByProductID(id string) ([]Review, error)
-	GetArtists() ([]Artist, error)
-	GetHotestArtists() ([]Artist, error)
-}
-
 // ProductService for final image style transfer
 type ProductService struct {
 	OutputPath string
@@ -69,12 +59,13 @@ type ProductService struct {
 	Session    *mgo.Session
 }
 
-// upload picture file
-func uploadPicutre(picData string, picID string, picFolder string) (string, error) {
-	if strings.HasPrefix(picData, "http") {
-		return picData, nil
-	}
+// NewProductSVC create a new product service
+func NewProductSVC(outputPath, host, port string, session *mgo.Session) *ProductService {
+	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session}
+}
 
+// upload picture file
+func uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
 	outfileName := picID + ".png"
 	outfilePath := path.Join("./data", picFolder, outfileName)
 
@@ -86,15 +77,23 @@ func uploadPicutre(picData string, picID string, picFolder string) (string, erro
 		return "", err
 	}
 
+	// upload file to the azure storage
+	img := ImageStoreService.Image{
+		UserID:   owner,
+		Location: outfilePath,
+		ImageID:  picID,
+	}
+	ImageStoreService.JobQueue <- img
+
 	newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
 	fmt.Println("New picuture is created: " + newImageURL)
 	return newImageURL, nil
 }
 
 // UploadContentFile upload content file to the cloud storage
-func (svc ProductService) UploadContentFile(productData Product) (Product, error) {
+func (svc *ProductService) UploadContentFile(productData Product) (Product, error) {
 	imageID := NSUtil.UniqueID()
-	newImageURL, err := uploadPicutre(productData.URL, imageID, "contents")
+	newImageURL, err := uploadPicutre(productData.Owner, productData.URL, imageID, "contents")
 
 	newContent := Product{ID: imageID}
 	if err != nil {
@@ -107,10 +106,12 @@ func (svc ProductService) UploadContentFile(productData Product) (Product, error
 }
 
 // UploadStyleFile upload style file to the cloud storage
-func (svc ProductService) UploadStyleFile(productData Product) (Product, error) {
+func (svc *ProductService) UploadStyleFile(productData Product) (Product, error) {
 	imageID := NSUtil.UniqueID()
-	newImageURL, err := uploadPicutre(productData.URL, imageID, "styles")
+	newImageURL, err := uploadPicutre(productData.Owner, productData.URL, imageID, "styles")
 
+	// The product's URL is a cached local image url, it will be updated by listening the ImageStoreService
+	// UploadResult Channel asychonously
 	newProduct := Product{ID: imageID}
 	if err != nil {
 		fmt.Println(err)
@@ -135,7 +136,7 @@ func (svc ProductService) UploadStyleFile(productData Product) (Product, error) 
 	return newProduct, nil
 }
 
-func (svc ProductService) addProduct(product Product) error {
+func (svc *ProductService) addProduct(product Product) error {
 	session := svc.Session.Copy()
 	defer session.Close()
 
@@ -166,7 +167,7 @@ func getQueryBSon(params QueryParams) bson.M {
 }
 
 // GetProducts find all the generated products(images)
-func (svc ProductService) GetProducts(params QueryParams) ([]Product, error) {
+func (svc *ProductService) GetProducts(params QueryParams) ([]Product, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
@@ -185,7 +186,7 @@ func (svc ProductService) GetProducts(params QueryParams) ([]Product, error) {
 }
 
 // GetProductsByID find the product by id
-func (svc ProductService) GetProductsByID(id string) (Product, error) {
+func (svc *ProductService) GetProductsByID(id string) (Product, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
@@ -205,7 +206,7 @@ func (svc ProductService) GetProductsByID(id string) (Product, error) {
 }
 
 // GetReviewsByProductID find the
-func (svc ProductService) GetReviewsByProductID(id string) ([]Review, error) {
+func (svc *ProductService) GetReviewsByProductID(id string) ([]Review, error) {
 
 	session := svc.Session.Copy()
 	defer session.Close()
@@ -228,7 +229,7 @@ func (svc ProductService) GetReviewsByProductID(id string) ([]Review, error) {
 }
 
 // GetArtists return all the available artists
-func (svc ProductService) GetArtists() ([]Artist, error) {
+func (svc *ProductService) GetArtists() ([]Artist, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
@@ -246,7 +247,7 @@ func (svc ProductService) GetArtists() ([]Artist, error) {
 }
 
 // GetHotestArtists return the active hotest artist
-func (svc ProductService) GetHotestArtists() ([]Artist, error) {
+func (svc *ProductService) GetHotestArtists() ([]Artist, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
@@ -261,4 +262,36 @@ func (svc ProductService) GetHotestArtists() ([]Artist, error) {
 	}
 
 	return artists, nil
+}
+
+// UpdateProductDBService update the backend database by accept channel message
+type UpdateProductDBService struct {
+	Session *mgo.Session
+}
+
+// NewUpdateProductDBSVC create a new background update service
+func NewUpdateProductDBSVC(session *mgo.Session) *UpdateProductDBService {
+	return &UpdateProductDBService{Session: session}
+}
+
+// Run update the database through the channel
+func (svc *UpdateProductDBService) Run() {
+	go func() {
+		for {
+			select {
+			case updateInfo := <-ImageStoreService.UploadResultQueue:
+				// check the database
+				session := svc.Session.Copy()
+				defer session.Close()
+
+				c := session.DB("store").C("products")
+				err := c.Update(bson.M{"id": updateInfo.ImageID}, bson.M{"$set": bson.M{"url": updateInfo.Location}})
+				if err != nil {
+					// Todo: log the update error
+					fmt.Println("Updating failed")
+					fmt.Println(err.Error())
+				}
+			}
+		}
+	}()
 }

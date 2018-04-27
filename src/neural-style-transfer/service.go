@@ -8,15 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
-
-	"gopkg.in/mgo.v2"
 )
-
-// Service for neural style transfer service
-type Service interface {
-	StyleTransfer(content, style string, iterations int) (string, error)
-	StyleTransferPreview(content, style string) (string, error)
-}
 
 // NeuralTransferService for final image style transfer
 type NeuralTransferService struct {
@@ -25,11 +17,16 @@ type NeuralTransferService struct {
 	OutputPath         string
 	Host               string
 	Port               string
-	Session            *mgo.Session
+}
+
+// NewNeuralTransferSVC generate a transfer service
+func NewNeuralTransferSVC(networkPath, previewNetworkPath, outputPath, host, port string) *NeuralTransferService {
+	return &NeuralTransferService{NetworkPath: networkPath, PreviewNetworkPath: previewNetworkPath,
+		OutputPath: outputPath, Host: host, Port: port}
 }
 
 // StyleTransfer for applying the style image to the content image, and generated it as output image
-func (svc NeuralTransferService) StyleTransfer(content, style string, iterations int) (string, error) {
+func (svc *NeuralTransferService) StyleTransfer(content, style string, iterations int) (string, error) {
 	python, err := exec.LookPath("python")
 	if err != nil {
 		return "", errors.New("No python installed")
@@ -70,7 +67,7 @@ func (svc NeuralTransferService) StyleTransfer(content, style string, iterations
 }
 
 // StyleTransferPreview for applying the style image to the content image, and generated it as output image
-func (svc NeuralTransferService) StyleTransferPreview(content, style string) (string, error) {
+func (svc *NeuralTransferService) StyleTransferPreview(content, style string) (string, error) {
 	python, err := exec.LookPath("python")
 	if err != nil {
 		return "", errors.New("No python installed")
