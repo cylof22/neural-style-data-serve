@@ -8,6 +8,7 @@ import (
 	"neural-style-image-store"
 	"path"
 	"strings"
+	"strconv"
 
 	"neural-style-util"
 
@@ -15,18 +16,59 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+type ProductStory struct {
+	Description  string   `json:"description"`
+	Pictures     []string `json:"pictures"`
+}
+
+// price type
+// const (
+// 	fix = iota
+//     auction
+//     onlyShow
+// )
+type ProductPrice struct {
+	Type         string  `json:"type"`
+	Value        string  `json:"value"`
+}
+
+// product type
+// const (
+//     Digit = iota
+//     Entity
+// )
+type UploadProduct struct {
+	Owner       string        `json:"owner"`
+	Maker       string        `json:"maker"`
+	Price       ProductPrice  `json:"price"`
+	PicData     string        `json:"picData"`
+	StyleImgURL string        `json:"styleImageUrl"`
+	Tags        []string      `json:"tags"`
+	Story       ProductStory  `json:"story"`
+	Type		string        `json:"type"`
+}
+
+type BatchProducts struct {
+	Owner       string        `json:"owner"`
+	Maker       string        `json:"maker"`
+	Price       ProductPrice  `json:"price"`
+	PicDatas    []string      `json:"datas"`
+	Tags        []string      `json:"tags"`
+	Type		string        `json:"type"`
+}
+
 // Product define the basic elements of the product
 type Product struct {
-	ID          string   `json:"id"`
-	Title       string   `json:"title"`
-	Owner       string   `json:"owner"`
-	Creator     string   `json:"creator"`
-	Price       float32  `json:"price"`
-	Rating      float32  `json:"rating"`
-	Description string   `json:"description"`
-	URL         string   `json:"url"`
-	StyleImgURL string   `json:"styleImgUrl"`
-	Categories  []string `json:"categories"`
+	ID          string        `json:"id"`
+	Owner       string        `json:"owner"`
+	Maker       string        `json:"maker"`
+	Price       ProductPrice  `json:"price"`
+	Rating      float32       `json:"rating"`
+	URL         string        `json:"url"`
+	StyleImgURL string        `json:"styleImgUrl"`
+	Tags        []string      `json:"tags"`
+	Story       ProductStory  `json:"story"`
+	Type		string        `json:"type"`
 }
 
 type QueryParams struct {
@@ -106,9 +148,9 @@ func (svc *ProductService) UploadContentFile(productData Product) (Product, erro
 }
 
 // UploadStyleFile upload style file to the cloud storage
-func (svc *ProductService) UploadStyleFile(productData Product) (Product, error) {
+func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, error) {
 	imageID := NSUtil.UniqueID()
-	newImageURL, err := uploadPicutre(productData.Owner, productData.URL, imageID, "styles")
+	newImageURL, err := uploadPicutre(productData.Owner, productData.PicData, imageID, "styles")
 
 	// The product's URL is a cached local image url, it will be updated by listening the ImageStoreService
 	// UploadResult Channel asychonously
@@ -119,21 +161,49 @@ func (svc *ProductService) UploadStyleFile(productData Product) (Product, error)
 	}
 
 	newProduct.Owner = productData.Owner
-	newProduct.Creator = productData.Creator
-	if newProduct.Creator == "" {
-		newProduct.Creator = productData.Owner
-	}
-	newProduct.Title = productData.Title
-	newProduct.Description = productData.Description
+	newProduct.Maker = productData.Maker
 	newProduct.Price = productData.Price
-	newProduct.Categories = productData.Categories
+	newProduct.Tags = productData.Tags
 	newProduct.URL = newImageURL
 	newProduct.StyleImgURL = productData.StyleImgURL
+	newProduct.Story.Description = productData.Story.Description
+	newProduct.Type = productData.Type
+
+	newProduct.Story.Pictures = productData.Story.Pictures
+	for index, pic := range productData.Story.Pictures {
+		picId := NSUtil.UniqueID()
+		picURL, err := uploadPicutre(productData.Owner, pic, picId, "styles")
+		if (err == nil) {
+			newProduct.Story.Pictures[index] = picURL
+		} else {
+			newProduct.Story.Pictures[index] = ""
+		}
+	}
 
 	// add it to product data to the database
 	err = svc.addProduct(newProduct)
 
 	return newProduct, nil
+}
+
+func (svc *ProductService) UploadStyleFiles(products BatchProducts) (string, error) {
+	for index, picData := range products.PicDatas {
+		var uploadData UploadProduct;
+		uploadData.Owner = products.Owner
+		uploadData.Maker = products.Maker
+		uploadData.Price = products.Price
+		uploadData.Tags = products.Tags
+		uploadData.Type = products.Type
+		uploadData.PicData = picData
+
+		_, err := svc.UploadStyleFile(uploadData)
+		if (err != nil) {
+			fmt.Println(err)
+			return "Number" + strconv.Itoa(index) + " is failed to upload", err
+		}
+	}
+
+	return "succeed", nil
 }
 
 func (svc *ProductService) addProduct(product Product) error {
