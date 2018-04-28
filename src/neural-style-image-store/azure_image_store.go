@@ -101,7 +101,7 @@ func (svc AzureImageStore) Find(userID, fileName string) (string, error) {
 	sasQueryParams := azblob.BlobSASSignatureValues{
 		Protocol:      azblob.SASProtocolHTTPS,
 		ExpiryTime:    time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
-		Permissions:   azblob.AccountSASPermissions{Read: true}.String(),
+		Permissions:   azblob.BlobSASPermissions{Read: true}.String(),
 		ContainerName: userID,
 		BlobName:      fileName,
 	}.NewSASQueryParameters(credential)
@@ -111,8 +111,8 @@ func (svc AzureImageStore) Find(userID, fileName string) (string, error) {
 		return "", errors.New(fileName + "doesn't exist")
 	}
 
-	publicblobURL := "https://%s" + svc.StorageURL + "?%s"
-	publicblobURL = fmt.Sprintf(publicblobURL, svc.StorageAccount, qp)
+	publicblobURL := "https://%s" + svc.StorageURL + "/%s/%s?%s"
+	publicblobURL = fmt.Sprintf(publicblobURL, svc.StorageAccount, userID, fileName, qp)
 
 	return publicblobURL, nil
 }
