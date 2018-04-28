@@ -21,6 +21,10 @@ var JobQueue chan Image
 // UploadResultQueue A buffered channel that send back the upload result
 var UploadResultQueue chan UploadResult
 
+// Stores define group of image stores services
+// Azure storage support multiple parallel  store account
+var Stores map[string](*AzureImageStore)
+
 // Done closed channel
 var Done chan interface{}
 
@@ -40,6 +44,7 @@ func init() {
 		resultQueueSize = 2
 	}
 
+	Stores = make(map[string]*AzureImageStore)
 	JobQueue = make(chan Image, queueSize)
 	UploadResultQueue = make(chan UploadResult, resultQueueSize)
 	Done = make(chan interface{})
@@ -57,17 +62,20 @@ type Worker struct {
 	quit       chan bool
 
 	// ImageStore service
-	Store AzureImageStore
+	Store *AzureImageStore
 }
 
 // NewWorker generate the new worker
 func NewWorker(workerPool chan chan Image) Worker {
-	return Worker{
+	storeWorker := Worker{
 		WorkerPool: workerPool,
 		JobChannel: make(chan Image),
 		quit:       make(chan bool),
 		Store:      NewAzureImageStore(),
 	}
+
+	Stores[storeWorker.Store.StorageAccount] = storeWorker.Store
+	return storeWorker
 }
 
 // Start method starts the run loop for the worker, listening for a quit channel in

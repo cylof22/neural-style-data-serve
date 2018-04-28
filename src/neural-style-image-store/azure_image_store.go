@@ -29,8 +29,8 @@ type AzureImageStore struct {
 }
 
 // NewAzureImageStore create the default azure image storage
-func NewAzureImageStore() AzureImageStore {
-	return AzureImageStore{
+func NewAzureImageStore() *AzureImageStore {
+	return &AzureImageStore{
 		StorageAccount: azStorageAccount,
 		StorageKey:     azStorageKey,
 		StorageURL:     azStorageURL,
@@ -38,7 +38,7 @@ func NewAzureImageStore() AzureImageStore {
 }
 
 // Save image on azure storage
-func (svc AzureImageStore) Save(img Image) (string, error) {
+func (svc *AzureImageStore) Save(img Image) (string, error) {
 	// Create a default request pipeline using your storage account name and account key.
 	credential := azblob.NewSharedKeyCredential(svc.StorageAccount, svc.StorageKey)
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
@@ -93,7 +93,7 @@ func (svc AzureImageStore) Save(img Image) (string, error) {
 }
 
 // Find the selected image from id
-func (svc AzureImageStore) Find(userID, fileName string) (string, error) {
+func (svc *AzureImageStore) Find(userID, fileName string) (string, error) {
 	credential := azblob.NewSharedKeyCredential(svc.StorageAccount, svc.StorageKey)
 
 	// return the blob url for the end user
@@ -118,7 +118,7 @@ func (svc AzureImageStore) Find(userID, fileName string) (string, error) {
 }
 
 // FindAllByUser return all the image for a selected user
-func (svc AzureImageStore) FindAllByUser(userID string) ([]string, error) {
+func (svc *AzureImageStore) FindAllByUser(userID string) ([]string, error) {
 	var blobsURL []string
 
 	credential := azblob.NewSharedKeyCredential(svc.StorageAccount, svc.StorageKey)

@@ -5,10 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"neural-style-image-store"
 	"path"
-	"strings"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"neural-style-util"
 
@@ -16,9 +19,10 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// ProductStory define the background story of the image
 type ProductStory struct {
-	Description  string   `json:"description"`
-	Pictures     []string `json:"pictures"`
+	Description string   `json:"description"`
+	Pictures    []string `json:"pictures"`
 }
 
 // price type
@@ -27,9 +31,10 @@ type ProductStory struct {
 //     auction
 //     onlyShow
 // )
+// ProductPrice define the basic price and type of the image
 type ProductPrice struct {
-	Type         string  `json:"type"`
-	Value        string  `json:"value"`
+	Type  string `json:"type"`
+	Value string `json:"value"`
 }
 
 // product type
@@ -37,43 +42,45 @@ type ProductPrice struct {
 //     Digit = iota
 //     Entity
 // )
+// UploadProduct define the full information of the uploaded image product
 type UploadProduct struct {
-	Owner       string        `json:"owner"`
-	Maker       string        `json:"maker"`
-	Price       ProductPrice  `json:"price"`
-	PicData     string        `json:"picData"`
-	StyleImgURL string        `json:"styleImageUrl"`
-	Tags        []string      `json:"tags"`
-	Story       ProductStory  `json:"story"`
-	Type		string        `json:"type"`
+	Owner       string       `json:"owner"`
+	Maker       string       `json:"maker"`
+	Price       ProductPrice `json:"price"`
+	PicData     string       `json:"picData"`
+	StyleImgURL string       `json:"styleImageUrl"`
+	Tags        []string     `json:"tags"`
+	Story       ProductStory `json:"story"`
+	Type        string       `json:"type"`
 }
 
+// BatchProducts define the products information for the batched uploaded image products
 type BatchProducts struct {
-	Owner       string        `json:"owner"`
-	Maker       string        `json:"maker"`
-	Price       ProductPrice  `json:"price"`
-	PicDatas    []string      `json:"datas"`
-	Tags        []string      `json:"tags"`
-	Type		string        `json:"type"`
+	Owner    string       `json:"owner"`
+	Maker    string       `json:"maker"`
+	Price    ProductPrice `json:"price"`
+	PicDatas []string     `json:"datas"`
+	Tags     []string     `json:"tags"`
+	Type     string       `json:"type"`
 }
 
 // Product define the basic elements of the product
 type Product struct {
-	ID          string        `json:"id"`
-	Owner       string        `json:"owner"`
-	Maker       string        `json:"maker"`
-	Price       ProductPrice  `json:"price"`
-	Rating      float32       `json:"rating"`
-	URL         string        `json:"url"`
-	StyleImgURL string        `json:"styleImgUrl"`
-	Tags        []string      `json:"tags"`
-	Story       ProductStory  `json:"story"`
-	Type		string        `json:"type"`
+	ID          string       `json:"id"`
+	Owner       string       `json:"owner"`
+	Maker       string       `json:"maker"`
+	Price       ProductPrice `json:"price"`
+	Rating      float32      `json:"rating"`
+	URL         string       `json:"url"`
+	StyleImgURL string       `json:"styleImgUrl"`
+	Tags        []string     `json:"tags"`
+	Story       ProductStory `json:"story"`
+	Type        string       `json:"type"`
 }
 
 type QueryParams struct {
-	Categories        []string `json:"categories"`
-	Owner             []string `json:"owner"`
+	Categories []string `json:"categories"`
+	Owner      []string `json:"owner"`
 }
 
 // Review define the basic elements of the review
@@ -104,6 +111,37 @@ type ProductService struct {
 // NewProductSVC create a new product service
 func NewProductSVC(outputPath, host, port string, session *mgo.Session) *ProductService {
 	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session}
+}
+
+// CompareExpireTimeinSASWithNow compare the generated expire time of a Azure SAS with now
+// True for 1 seconds later than now
+func CompareExpireTimeinSASWithNow(sasURL string) bool {
+	u, err := url.Parse(sasURL)
+	if err == nil {
+		urlQuery, err := url.ParseQuery(u.RawQuery)
+		if err == nil {
+			seArrays := urlQuery["se"]
+			if len(seArrays) != 0 {
+				expireTime, err := time.Parse(time.RFC3339, seArrays[0])
+				if err != nil {
+					fmt.Println("Time Parse error")
+				}
+				diff := expireTime.Sub(time.Now())
+				return diff.Seconds() > 1
+			}
+		}
+	}
+
+	return false
+}
+
+func updateProductURL(session *mgo.Session, imgID, url string) error {
+	// check the database
+	cpSession := session.Copy()
+	defer cpSession.Close()
+
+	c := cpSession.DB("store").C("products")
+	return c.Update(bson.M{"id": imgID}, bson.M{"$set": bson.M{"url": url}})
 }
 
 // upload picture file
@@ -173,7 +211,7 @@ func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, 
 	for index, pic := range productData.Story.Pictures {
 		picId := NSUtil.UniqueID()
 		picURL, err := uploadPicutre(productData.Owner, pic, picId, "styles")
-		if (err == nil) {
+		if err == nil {
 			newProduct.Story.Pictures[index] = picURL
 		} else {
 			newProduct.Story.Pictures[index] = ""
@@ -188,7 +226,7 @@ func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, 
 
 func (svc *ProductService) UploadStyleFiles(products BatchProducts) (string, error) {
 	for index, picData := range products.PicDatas {
-		var uploadData UploadProduct;
+		var uploadData UploadProduct
 		uploadData.Owner = products.Owner
 		uploadData.Maker = products.Maker
 		uploadData.Price = products.Price
@@ -197,7 +235,7 @@ func (svc *ProductService) UploadStyleFiles(products BatchProducts) (string, err
 		uploadData.PicData = picData
 
 		_, err := svc.UploadStyleFile(uploadData)
-		if (err != nil) {
+		if err != nil {
 			fmt.Println(err)
 			return "Number" + strconv.Itoa(index) + " is failed to upload", err
 		}
@@ -225,11 +263,11 @@ func (svc *ProductService) addProduct(product Product) error {
 
 func getQueryBSon(params QueryParams) bson.M {
 	query := bson.M{}
-	if (params.Categories != nil) {
+	if params.Categories != nil {
 		query["categories"] = params.Categories
 	}
 
-	if (params.Owner != nil) {
+	if params.Owner != nil {
 		query["owner"] = params.Owner[0]
 	}
 
@@ -252,6 +290,18 @@ func (svc *ProductService) GetProducts(params QueryParams) ([]Product, error) {
 		return products, errors.New("Database error")
 	}
 
+	// update all the expired storage urls
+	for _, prod := range products {
+		if !CompareExpireTimeinSASWithNow(prod.URL) {
+			// Launch a go routine to update the URL
+			storeSVC := ImageStoreService.Stores["tulian"]
+			storageURL, err := storeSVC.Find(prod.Owner, filepath.Base(prod.URL))
+			if err != nil {
+				// Todo: log update fail
+				go updateProductURL(svc.Session, prod.ID, storageURL)
+			}
+		}
+	}
 	return products, nil
 }
 
@@ -266,6 +316,16 @@ func (svc *ProductService) GetProductsByID(id string) (Product, error) {
 	if err != nil {
 		fmt.Println(err)
 		return Product{}, errors.New("Database error")
+	}
+
+	if !CompareExpireTimeinSASWithNow(product.URL) {
+		// Launch a go routine to update the URL
+		storeSVC := ImageStoreService.Stores["tulian"]
+		storageURL, err := storeSVC.Find(product.Owner, filepath.Base(product.URL))
+		if err != nil {
+			// Todo: log update fail
+			go updateProductURL(svc.Session, product.ID, storageURL)
+		}
 	}
 
 	if product.ID != id {
@@ -350,17 +410,7 @@ func (svc *UpdateProductDBService) Run() {
 		for {
 			select {
 			case updateInfo := <-ImageStoreService.UploadResultQueue:
-				// check the database
-				session := svc.Session.Copy()
-				defer session.Close()
-
-				c := session.DB("store").C("products")
-				err := c.Update(bson.M{"id": updateInfo.ImageID}, bson.M{"$set": bson.M{"url": updateInfo.Location}})
-				if err != nil {
-					// Todo: log the update error
-					fmt.Println("Updating failed")
-					fmt.Println(err.Error())
-				}
+				go updateProductURL(svc.Session, updateInfo.ImageID, updateInfo.Location)
 			}
 		}
 	}()
