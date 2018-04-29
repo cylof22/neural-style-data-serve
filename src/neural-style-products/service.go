@@ -309,8 +309,7 @@ func (svc *ProductService) GetProducts(params QueryParams) ([]Product, error) {
 
 	// update all the expired storage urls
 	for _, prod := range products {
-		//if !CompareExpireTimeinSASWithNow(prod.URL) {
-		if true {
+		if !CompareExpireTimeinSASWithNow(prod.URL) {
 			go updateProductURL(svc.Session, "tulian", prod.URL, prod.Owner, prod.ID)
 		}
 	}
