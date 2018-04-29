@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"neural-style-image-store"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -135,7 +134,25 @@ func CompareExpireTimeinSASWithNow(sasURL string) bool {
 	return false
 }
 
-func updateProductURL(session *mgo.Session, imgID, url string) error {
+func updateProductURL(session *mgo.Session, storageAccount, expiredURL, owner, imgID string) error {
+	// parse the file name
+	u, err := url.Parse(expiredURL)
+	if err != nil {
+		fmt.Println(err)
+	}
+	paths := strings.Split(u.Path, "/")
+	if len(paths) == 0 {
+		fmt.Println("File Name parse error")
+	}
+
+	fileName := paths[len(paths)-1]
+
+	storeSVC := ImageStoreService.Stores[storageAccount]
+	url, err := storeSVC.Find(owner, fileName)
+	if err != nil {
+		fmt.Println("Failed to created the Azure SAS for " + owner + fileName)
+	}
+
 	// check the database
 	cpSession := session.Copy()
 	defer cpSession.Close()
@@ -292,14 +309,9 @@ func (svc *ProductService) GetProducts(params QueryParams) ([]Product, error) {
 
 	// update all the expired storage urls
 	for _, prod := range products {
-		if !CompareExpireTimeinSASWithNow(prod.URL) {
-			// Launch a go routine to update the URL
-			storeSVC := ImageStoreService.Stores["tulian"]
-			storageURL, err := storeSVC.Find(prod.Owner, filepath.Base(prod.URL))
-			if err != nil {
-				// Todo: log update fail
-				go updateProductURL(svc.Session, prod.ID, storageURL)
-			}
+		//if !CompareExpireTimeinSASWithNow(prod.URL) {
+		if true {
+			go updateProductURL(svc.Session, "tulian", prod.URL, prod.Owner, prod.ID)
 		}
 	}
 	return products, nil
@@ -319,13 +331,7 @@ func (svc *ProductService) GetProductsByID(id string) (Product, error) {
 	}
 
 	if !CompareExpireTimeinSASWithNow(product.URL) {
-		// Launch a go routine to update the URL
-		storeSVC := ImageStoreService.Stores["tulian"]
-		storageURL, err := storeSVC.Find(product.Owner, filepath.Base(product.URL))
-		if err != nil {
-			// Todo: log update fail
-			go updateProductURL(svc.Session, product.ID, storageURL)
-		}
+		go updateProductURL(svc.Session, "tulian", product.URL, product.Owner, product.ID)
 	}
 
 	if product.ID != id {
@@ -410,7 +416,14 @@ func (svc *UpdateProductDBService) Run() {
 		for {
 			select {
 			case updateInfo := <-ImageStoreService.UploadResultQueue:
-				go updateProductURL(svc.Session, updateInfo.ImageID, updateInfo.Location)
+				go func(session *mgo.Session, imgID, url string) {
+					// check the database
+					cpSession := session.Copy()
+					defer cpSession.Close()
+
+					c := cpSession.DB("store").C("products")
+					c.Update(bson.M{"id": imgID}, bson.M{"$set": bson.M{"url": url}})
+				}(svc.Session, updateInfo.ImageID, updateInfo.Location)
 			}
 		}
 	}()
