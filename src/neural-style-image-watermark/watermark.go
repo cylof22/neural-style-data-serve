@@ -1,17 +1,15 @@
 package WaterMark
 
 import (
-	"fmt"
+	"errors"
 	"image"
 	"image/color"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"io"
-	"log"
 	"os"
 
-	"github.com/disintegration/gift"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/inconsolata"
 	"golang.org/x/image/math/fixed"
@@ -29,7 +27,7 @@ type WaterMark struct {
 }
 
 // CreateWaterMark generate composed image
-func (wm *WaterMark) CreateWaterMark(output io.Writer) image.Image {
+func (wm *WaterMark) CreateWaterMark(output io.Writer) (image.Image, error) {
 	var padding float64 = 2
 	w := 8 * (float64(len(wm.Text)) + (padding * 2))
 	h := 16 * padding
@@ -45,14 +43,8 @@ func (wm *WaterMark) CreateWaterMark(output io.Writer) image.Image {
 	d.DrawString(wm.Text)
 
 	bounds := img.Bounds()
-	scaled := image.NewRGBA(image.Rect(0, 0, int(float64(bounds.Max.X)*wm.Scale), int(float64(bounds.Max.Y)*wm.Scale)))
-	draw.BiLinear.Scale(scaled, scaled.Bounds(), img, bounds, draw.Src, nil)
-
-	g := gift.New(
-		gift.Rotate(45, color.Transparent, gift.CubicInterpolation),
-	)
-	waterMarkImg := image.NewNRGBA(g.Bounds(scaled.Bounds()))
-	g.Draw(waterMarkImg, scaled)
+	waterMarkImg := image.NewRGBA(image.Rect(0, 0, int(float64(bounds.Max.X)*wm.Scale), int(float64(bounds.Max.Y)*wm.Scale)))
+	draw.BiLinear.Scale(waterMarkImg, waterMarkImg.Bounds(), img, bounds, draw.Src, nil)
 
 	// get the source file size
 	reader, err := os.Open(wm.Source)
@@ -63,18 +55,13 @@ func (wm *WaterMark) CreateWaterMark(output io.Writer) image.Image {
 
 	// composited image
 	markedImage := image.NewRGBA(sourceBounds)
-	//draw.Draw(markedImage, sourceBounds, source, image.ZP, draw.Src)
+	draw.Draw(markedImage, sourceBounds, source, image.ZP, draw.Src)
 
 	// horrizontal
 	watermarkBounds := waterMarkImg.Bounds()
-	var offset image.Point
-	for offset.X = watermarkBounds.Max.X / -2; offset.X < sourceBounds.Max.X; offset.X += watermarkBounds.Max.X {
-		for offset.Y = watermarkBounds.Max.Y / -2; offset.Y < sourceBounds.Max.Y; offset.Y += watermarkBounds.Max.Y {
-			draw.Draw(markedImage, watermarkBounds.Add(offset), waterMarkImg, image.ZP, draw.Over)
-		}
-	}
+	offset := image.Point{X: sourceBounds.Max.X - watermarkBounds.Max.X + 25, Y: sourceBounds.Max.Y - watermarkBounds.Max.Y - 4}
+	draw.Draw(markedImage, watermarkBounds.Add(offset), waterMarkImg, image.ZP, draw.Over)
 
-	fmt.Println("Start output file")
 	// output the image
 	switch wm.Format {
 	case "png":
@@ -84,11 +71,8 @@ func (wm *WaterMark) CreateWaterMark(output io.Writer) image.Image {
 	case "jpeg":
 		err = jpeg.Encode(output, markedImage, &jpeg.Options{Quality: jpeg.DefaultQuality})
 	default:
-		log.Fatalf("unknown format %s", format)
-	}
-	if err != nil {
-		log.Fatalf("unable to encode image: %s", err)
+		err = errors.New("Unknown format" + format)
 	}
 
-	return markedImage
+	return markedImage, err
 }
