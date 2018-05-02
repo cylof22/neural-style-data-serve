@@ -83,7 +83,7 @@ func main() {
 
 	// HTTP transport
 	go func() {
-		fmt.Println("Starting server at port 8000")
+		fmt.Println("Starting server at port " + *serverPort)
 		handler := r
 		errChan <- http.ListenAndServe(*serverURL+":"+*serverPort, handler)
 	}()
