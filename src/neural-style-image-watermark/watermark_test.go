@@ -7,7 +7,7 @@ import (
 )
 
 func TestWaterMark(t *testing.T) {
-	demoTest := WaterMark{
+	demoTest := Service{
 		Source:    "./test.png",
 		Text:      "tulian",
 		TextColor: color.RGBA{0, 0, 255, 255},

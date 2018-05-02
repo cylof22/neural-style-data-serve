@@ -17,8 +17,8 @@ import (
 	"golang.org/x/image/draw"
 )
 
-// WaterMark define the basic information for watermark
-type WaterMark struct {
+// Service define the basic information for watermark
+type Service struct {
 	Source    string
 	Text      string
 	TextColor color.Color
@@ -27,7 +27,7 @@ type WaterMark struct {
 }
 
 // CreateWaterMark generate composed image
-func (wm *WaterMark) CreateWaterMark(output io.Writer) (image.Image, error) {
+func (wm *Service) CreateWaterMark(output io.Writer) (image.Image, error) {
 	var padding float64 = 2
 	w := 8 * (float64(len(wm.Text)) + (padding * 2))
 	h := 16 * padding
