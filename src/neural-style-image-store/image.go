@@ -28,6 +28,7 @@ type UploadResult struct {
 	StorageAccount string
 	StorageKey     string
 	ImageID        string
+	UploadError    error
 }
 
 var mimeExtensions = map[string]string{

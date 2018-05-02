@@ -180,7 +180,24 @@ func uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
 		Location: outfilePath,
 		ImageID:  picID,
 	}
-	ImageStoreService.JobQueue <- img
+
+	resultChannel := make(chan ImageStoreService.UploadResult)
+
+	imgJob := ImageStoreService.ImageJob{
+		UploadImage:   img,
+		ResultChannel: resultChannel,
+	}
+	ImageStoreService.JobQueue <- imgJob
+
+	// wait for the image result channel
+	uploadInfo := <-imgJob.ResultChannel
+	if uploadInfo.UploadError != nil {
+		// Todo: upload error
+	}
+
+	// add the memecached item
+
+	// construct the memcached url
 
 	newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
 	fmt.Println("New picuture is created: " + newImageURL)
@@ -397,33 +414,4 @@ func (svc *ProductService) GetHotestArtists() ([]Artist, error) {
 	}
 
 	return artists, nil
-}
-
-// UpdateProductDBService update the backend database by accept channel message
-type UpdateProductDBService struct {
-	Session *mgo.Session
-}
-
-// NewUpdateProductDBSVC create a new background update service
-func NewUpdateProductDBSVC(session *mgo.Session) *UpdateProductDBService {
-	return &UpdateProductDBService{Session: session}
-}
-
-// Run update the database through the channel
-func (svc *UpdateProductDBService) Run() {
-	go func() {
-		for {
-			select {
-			case updateInfo := <-ImageStoreService.UploadResultQueue:
-				go func(session *mgo.Session, imgID, url string) {
-					// check the database
-					cpSession := session.Copy()
-					defer cpSession.Close()
-
-					c := cpSession.DB("store").C("products")
-					c.Update(bson.M{"id": imgID}, bson.M{"$set": bson.M{"url": url}})
-				}(svc.Session, updateInfo.ImageID, updateInfo.Location)
-			}
-		}
-	}()
 }
