@@ -1,4 +1,4 @@
-package ImageStoreService
+package main
 
 import (
 	"errors"
@@ -64,7 +64,7 @@ func (svc AwsImageStore) Save(img *Image) error {
 		}
 	}
 
-	f, err := os.Open(img.ParentPath + img.Location)
+	f, err := os.Open(img.Location)
 	if err != nil {
 		return errors.New("Failed to open the file")
 	}

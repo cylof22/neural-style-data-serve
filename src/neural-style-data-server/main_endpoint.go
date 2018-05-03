@@ -31,13 +31,18 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 		httptransport.ServerErrorEncoder(encodeError),
 	}
 
+	storageServiceURL := "http://" + storageServerURL + ":" + storageServerPort
+	storageSaveURL := storageServiceURL + storageServerSaveRouter
+	storageFindURL := storageServerURL + storageServerFindRouter
+
 	// Style Service
 	styleTransferService := StyleService.NewNeuralTransferSVC(*networkPath, *previewNetworkPath,
 		*outputPath, *serverURL, *serverPort)
 	r = StyleService.MakeHTTPHandler(ctx, r, styleTransferService, options...)
 
 	// Product service
-	productService := ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort, dbSession)
+	productService := ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort, storageSaveURL
+		storageFindURL, dbSession)
 	r = ProductService.MakeHTTPHandler(ctx, r, productService, options...)
 
 	// User service

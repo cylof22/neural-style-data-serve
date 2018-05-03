@@ -1,12 +1,13 @@
 package ProductService
 
 import (
+	"bytes"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
-	"neural-style-image-store"
 	"path"
 	"strconv"
 	"strings"
@@ -105,11 +106,14 @@ type ProductService struct {
 	Host       string
 	Port       string
 	Session    *mgo.Session
+	SaveURL    string
+	FindURL    string
 }
 
 // NewProductSVC create a new product service
-func NewProductSVC(outputPath, host, port string, session *mgo.Session) *ProductService {
-	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session}
+func NewProductSVC(outputPath, host, port, saveURL, findURL string, session *mgo.Session) *ProductService {
+	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session,
+		SaveURL: saveURL, FindURL: findURL}
 }
 
 // CompareExpireTimeinSASWithNow compare the generated expire time of a Azure SAS with now
@@ -136,7 +140,7 @@ func CompareExpireTimeinSASWithNow(sasURL string) bool {
 
 func updateProductURL(session *mgo.Session, storageAccount, expiredURL, owner, imgID string) error {
 	// parse the file name
-	u, err := url.Parse(expiredURL)
+	/*u, err := url.Parse(expiredURL)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -147,22 +151,22 @@ func updateProductURL(session *mgo.Session, storageAccount, expiredURL, owner, i
 
 	fileName := paths[len(paths)-1]
 
-	storeSVC := ImageStoreService.Stores[storageAccount]
+	/*storeSVC := ImageStoreService.Stores[storageAccount]
 	url, err := storeSVC.Find(owner, fileName)
 	if err != nil {
 		fmt.Println("Failed to created the Azure SAS for " + owner + fileName)
-	}
+	}*/
 
 	// check the database
 	cpSession := session.Copy()
 	defer cpSession.Close()
 
 	c := cpSession.DB("store").C("products")
-	return c.Update(bson.M{"id": imgID}, bson.M{"$set": bson.M{"url": url}})
+	return c.Update(bson.M{"id": imgID}, bson.M{"$set": bson.M{"url": ""}})
 }
 
 // upload picture file
-func uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
+func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
 	outfileName := picID + ".png"
 	outfilePath := path.Join("./data", picFolder, outfileName)
 
@@ -174,30 +178,29 @@ func uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
 		return "", err
 	}
 
-	// upload file to the azure storage
-	img := ImageStoreService.Image{
-		UserID:   owner,
-		Location: outfilePath,
-		ImageID:  picID,
+	storageClient := &http.Client{}
+
+	storageURL := svc.SaveURL + "?userid=" + owner + "&imageid=" + outfileName
+	bodyReader := bytes.NewReader(baseData)
+	storageReq, err := http.NewRequest("POST", storageURL, bodyReader)
+	if err != nil {
+		fmt.Println("Construct IO reader fails")
+		return "", err
 	}
 
-	resultChannel := make(chan ImageStoreService.UploadResult)
-
-	imgJob := ImageStoreService.ImageJob{
-		UploadImage:   img,
-		ResultChannel: resultChannel,
+	res, err := storageClient.Do(storageReq)
+	if err != nil {
+		fmt.Println(err.Error())
+		return "", err
 	}
-	ImageStoreService.JobQueue <- imgJob
 
-	// wait for the image result channel
-	uploadInfo := <-imgJob.ResultChannel
-	if uploadInfo.UploadError != nil {
-		// Todo: upload error
+	if res.StatusCode != http.StatusOK {
+		return "", errors.New("Upload fails")
 	}
 
 	// add the memecached item
 
-	// construct the memcached url
+	// construct the memcached url*/
 
 	newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
 	fmt.Println("New picuture is created: " + newImageURL)

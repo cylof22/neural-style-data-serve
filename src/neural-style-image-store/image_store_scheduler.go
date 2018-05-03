@@ -1,4 +1,4 @@
-package ImageStoreService
+package main
 
 import (
 	"os"
@@ -11,8 +11,6 @@ var (
 	MaxWorker = os.Getenv("MAX_WORKERS")
 	// MaxQueue define the size of the cache queue
 	MaxQueue = os.Getenv("MAX_QUEUE")
-	// MaxResultQueue define the size of the cached result queue
-	MaxResultQueue = os.Getenv("MAX_RESULT_QUEUE")
 )
 
 // ImageJob define the azure job upload job
@@ -88,21 +86,24 @@ func (w Worker) Start() {
 				// we have received a work request.
 				var fileURL string
 				fileURL, err := w.Store.Save(imgJob.UploadImage)
+				fileName := imgJob.UploadImage.ImageName
+				if len(imgJob.UploadImage.Location) != 0 {
+					fileName = filepath.Base(imgJob.UploadImage.Location)
+				}
+
 				if err != nil {
 					// Todo: log the failed operation
 					imgJob.ResultChannel <- UploadResult{
 						UserID:      imgJob.UploadImage.UserID,
-						Name:        filepath.Base(imgJob.UploadImage.Location),
+						Name:        fileName,
 						Location:    "",
-						ImageID:     imgJob.UploadImage.ImageID,
 						UploadError: err,
 					}
 				} else {
 					imgJob.ResultChannel <- UploadResult{
 						UserID:      imgJob.UploadImage.UserID,
-						Name:        filepath.Base(imgJob.UploadImage.Location),
+						Name:        fileName,
 						Location:    fileURL,
-						ImageID:     imgJob.UploadImage.ImageID,
 						UploadError: nil,
 					}
 				}

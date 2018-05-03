@@ -1,4 +1,4 @@
-package ImageStoreService
+package main
 
 import (
 	"errors"
@@ -12,10 +12,10 @@ import (
 
 // Image define the basic information for the uploaded image
 type Image struct {
-	UserID     string
-	Location   string
-	ParentPath string
-	ImageID    string
+	UserID    string
+	ImageName string
+	ImageData []byte
+	Location  string
 }
 
 // UploadResult define the basic inforation after the image is uploaded to the cloud storage
@@ -27,7 +27,6 @@ type UploadResult struct {
 	Location       string
 	StorageAccount string
 	StorageKey     string
-	ImageID        string
 	UploadError    error
 }
 
@@ -65,7 +64,7 @@ func (img *Image) CreateImageFromURL(imageURL string) (string, error) {
 	imgName := filepath.Base(imageURL)
 	img.Location = imgName
 
-	imgPath := img.ParentPath + img.Location
+	imgPath := img.Location
 	savedFile, err := os.Create(imgPath)
 
 	if err != nil {
@@ -86,7 +85,7 @@ func (img *Image) CreateFromFile(file multipart.File, headers *multipart.FileHea
 	imgName := headers.Filename
 	img.Location = imgName
 
-	savedPath := img.ParentPath + img.Location
+	savedPath := img.Location
 	savedFile, err := os.Create(savedPath)
 	if err != nil {
 		return "", err

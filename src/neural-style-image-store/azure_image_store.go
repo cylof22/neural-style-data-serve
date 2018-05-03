@@ -1,4 +1,4 @@
-package ImageStoreService
+package main
 
 import (
 	"context"
@@ -53,21 +53,34 @@ func (svc *AzureImageStore) Save(img Image) (string, error) {
 
 	// Create the container
 	ctx := context.Background() // This example uses a never-expiring context
+	var blobName string
 	_, err := containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
-	// add the image file as a blob to the container
-	blobName := filepath.Base(img.Location)
-	imgBlobURL := containerURL.NewBlockBlobURL(blobName)
-	file, err := os.Open(img.ParentPath + img.Location)
-	if err != nil {
-		fmt.Println(err.Error())
-		return "", err
+	if len(img.Location) != 0 {
+		// add the image file as a blob to the container
+		blobName := filepath.Base(img.Location)
+		imgBlobURL := containerURL.NewBlockBlobURL(blobName)
+		file, err := os.Open(img.Location)
+		if err != nil {
+			fmt.Println(err.Error())
+			return "", err
+		}
+
+		// The high-level API UploadFileToBlockBlob function uploads blocks in parallel for optimal performance, and
+		// can handle large files as well.
+		// This function calls PutBlock/PutBlockList for files larger 256 MBs, and calls PutBlob for any file smaller
+		_, err = azblob.UploadFileToBlockBlob(ctx, file, imgBlobURL, azblob.UploadToBlockBlobOptions{
+			BlockSize:   4 * 1024 * 1024,
+			Parallelism: 16})
+	} else {
+		blobName = img.ImageName
+		imgBlobURL := containerURL.NewBlockBlobURL(blobName)
+		// The high-level API UploadFileToBlockBlob function uploads blocks in parallel for optimal performance, and
+		// can handle large files as well.
+		// This function calls PutBlock/PutBlockList for files larger 256 MBs, and calls PutBlob for any file smaller
+		_, err = azblob.UploadBufferToBlockBlob(ctx, img.ImageData, imgBlobURL, azblob.UploadToBlockBlobOptions{
+			BlockSize:   4 * 1024 * 1024,
+			Parallelism: 16})
 	}
-	// The high-level API UploadFileToBlockBlob function uploads blocks in parallel for optimal performance, and
-	// can handle large files as well.
-	// This function calls PutBlock/PutBlockList for files larger 256 MBs, and calls PutBlob for any file smaller
-	_, err = azblob.UploadFileToBlockBlob(ctx, file, imgBlobURL, azblob.UploadToBlockBlobOptions{
-		BlockSize:   4 * 1024 * 1024,
-		Parallelism: 16})
 
 	if err != nil {
 		return "", err
