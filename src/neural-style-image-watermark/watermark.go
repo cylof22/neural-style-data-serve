@@ -19,6 +19,7 @@ import (
 
 // Service define the basic information for watermark
 type Service struct {
+	SourceImg image.Image
 	Source    string
 	Text      string
 	TextColor color.Color
@@ -46,11 +47,21 @@ func (wm *Service) CreateWaterMark(output io.Writer) (image.Image, error) {
 	waterMarkImg := image.NewRGBA(image.Rect(0, 0, int(float64(bounds.Max.X)*wm.Scale), int(float64(bounds.Max.Y)*wm.Scale)))
 	draw.BiLinear.Scale(waterMarkImg, waterMarkImg.Bounds(), img, bounds, draw.Src, nil)
 
-	// get the source file size
-	reader, err := os.Open(wm.Source)
-	defer reader.Close()
+	var err error
+	var source = wm.SourceImg
+	if len(wm.Source) != 0 {
+		// get the source file size
+		reader, err := os.Open(wm.Source)
+		defer reader.Close()
+		if err != nil {
+			return nil, err
+		}
+		source, _, err = image.Decode(reader)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	source, format, err := image.Decode(reader)
 	sourceBounds := source.Bounds()
 
 	// composited image
@@ -71,7 +82,7 @@ func (wm *Service) CreateWaterMark(output io.Writer) (image.Image, error) {
 	case "jpeg":
 		err = jpeg.Encode(output, markedImage, &jpeg.Options{Quality: jpeg.DefaultQuality})
 	default:
-		err = errors.New("Unknown format" + format)
+		err = errors.New("Unknown format" + wm.Format)
 	}
 
 	return markedImage, err

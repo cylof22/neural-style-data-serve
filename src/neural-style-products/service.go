@@ -5,14 +5,17 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"image"
+	"image/color"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
 
+	"neural-style-image-watermark"
 	"neural-style-util"
 
 	mgo "gopkg.in/mgo.v2"
@@ -140,16 +143,19 @@ func CompareExpireTimeinSASWithNow(sasURL string) bool {
 
 // upload picture file
 func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
-	outfileName := picID + ".png"
-	outfilePath := path.Join("./data", picFolder, outfileName)
-
 	pos := strings.Index(picData, ",")
 	realData := picData[pos+1 : len(picData)]
-	baseData, _ := base64.StdEncoding.DecodeString(realData)
-	err := ioutil.WriteFile(outfilePath, baseData, 0644)
+	baseData, err := base64.StdEncoding.DecodeString(realData)
 	if err != nil {
 		return "", err
 	}
+
+	imgReader := bytes.NewReader(baseData)
+	img, format, err := image.Decode(imgReader)
+	if err != nil {
+		return "", err
+	}
+	outfileName := picID + "." + format
 
 	storageClient := &http.Client{}
 
@@ -171,9 +177,27 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 		return "", errors.New("Upload fails")
 	}
 
+	outfilePath := path.Join("./data", picFolder, outfileName)
+
+	watermarkSVC := WaterMark.Service{
+		SourceImg: img,
+		Text:      "tulian",
+		TextColor: color.RGBA{0, 0, 255, 255},
+		Scale:     5.0,
+		Format:    format,
+	}
+
+	outputFile, _ := os.Create(outfilePath)
+	defer outputFile.Close()
+	_, err = watermarkSVC.CreateWaterMark(outputFile)
+	if err != nil {
+		fmt.Println(err.Error())
+		return "", err
+	}
+
 	// add the memecached item
 
-	// construct the memcached url*/
+	// construct the memcached url
 
 	newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
 	fmt.Println("New picuture is created: " + newImageURL)
