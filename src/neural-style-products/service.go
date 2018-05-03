@@ -138,33 +138,6 @@ func CompareExpireTimeinSASWithNow(sasURL string) bool {
 	return false
 }
 
-func updateProductURL(session *mgo.Session, storageAccount, expiredURL, owner, imgID string) error {
-	// parse the file name
-	/*u, err := url.Parse(expiredURL)
-	if err != nil {
-		fmt.Println(err)
-	}
-	paths := strings.Split(u.Path, "/")
-	if len(paths) == 0 {
-		fmt.Println("File Name parse error")
-	}
-
-	fileName := paths[len(paths)-1]
-
-	/*storeSVC := ImageStoreService.Stores[storageAccount]
-	url, err := storeSVC.Find(owner, fileName)
-	if err != nil {
-		fmt.Println("Failed to created the Azure SAS for " + owner + fileName)
-	}*/
-
-	// check the database
-	cpSession := session.Copy()
-	defer cpSession.Close()
-
-	c := cpSession.DB("store").C("products")
-	return c.Update(bson.M{"id": imgID}, bson.M{"$set": bson.M{"url": ""}})
-}
-
 // upload picture file
 func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
 	outfileName := picID + ".png"
@@ -210,7 +183,7 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 // UploadContentFile upload content file to the cloud storage
 func (svc *ProductService) UploadContentFile(productData Product) (Product, error) {
 	imageID := NSUtil.UniqueID()
-	newImageURL, err := uploadPicutre(productData.Owner, productData.URL, imageID, "contents")
+	newImageURL, err := svc.uploadPicutre(productData.Owner, productData.URL, imageID, "contents")
 
 	newContent := Product{ID: imageID}
 	if err != nil {
@@ -225,7 +198,7 @@ func (svc *ProductService) UploadContentFile(productData Product) (Product, erro
 // UploadStyleFile upload style file to the cloud storage
 func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, error) {
 	imageID := NSUtil.UniqueID()
-	newImageURL, err := uploadPicutre(productData.Owner, productData.PicData, imageID, "styles")
+	newImageURL, err := svc.uploadPicutre(productData.Owner, productData.PicData, imageID, "styles")
 
 	// The product's URL is a cached local image url, it will be updated by listening the ImageStoreService
 	// UploadResult Channel asychonously
@@ -247,7 +220,7 @@ func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, 
 	newProduct.Story.Pictures = productData.Story.Pictures
 	for index, pic := range productData.Story.Pictures {
 		picId := NSUtil.UniqueID()
-		picURL, err := uploadPicutre(productData.Owner, pic, picId, "styles")
+		picURL, err := svc.uploadPicutre(productData.Owner, pic, picId, "styles")
 		if err == nil {
 			newProduct.Story.Pictures[index] = picURL
 		} else {
@@ -261,6 +234,7 @@ func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, 
 	return newProduct, nil
 }
 
+// UploadStyleFiles upload style file
 func (svc *ProductService) UploadStyleFiles(products BatchProducts) (string, error) {
 	for index, picData := range products.PicDatas {
 		var uploadData UploadProduct
@@ -327,12 +301,9 @@ func (svc *ProductService) GetProducts(params QueryParams) ([]Product, error) {
 		return products, errors.New("Database error")
 	}
 
-	// update all the expired storage urls
-	for _, prod := range products {
-		if !CompareExpireTimeinSASWithNow(prod.URL) {
-			go updateProductURL(svc.Session, "tulian", prod.URL, prod.Owner, prod.ID)
-		}
-	}
+	// get the memcached image data, if cache missing, get the url from the backend storage,
+	// watermark the file, and add to the memcache
+
 	return products, nil
 }
 
@@ -349,9 +320,8 @@ func (svc *ProductService) GetProductsByID(id string) (Product, error) {
 		return Product{}, errors.New("Database error")
 	}
 
-	if !CompareExpireTimeinSASWithNow(product.URL) {
-		go updateProductURL(svc.Session, "tulian", product.URL, product.Owner, product.ID)
-	}
+	// get the memcached image data, if cache missing, get the url from the backend storage,
+	// watermark the file, and add to the memcache
 
 	if product.ID != id {
 		return Product{}, errors.New("Failed to find product for the id: " + id)

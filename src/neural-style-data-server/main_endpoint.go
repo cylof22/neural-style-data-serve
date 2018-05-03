@@ -31,9 +31,9 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 		httptransport.ServerErrorEncoder(encodeError),
 	}
 
-	storageServiceURL := "http://" + storageServerURL + ":" + storageServerPort
-	storageSaveURL := storageServiceURL + storageServerSaveRouter
-	storageFindURL := storageServerURL + storageServerFindRouter
+	storageServiceURL := "http://" + *storageServerURL + ":" + *storageServerPort
+	storageSaveURL := storageServiceURL + *storageServerSaveRouter
+	storageFindURL := storageServiceURL + *storageServerFindRouter
 
 	// Style Service
 	styleTransferService := StyleService.NewNeuralTransferSVC(*networkPath, *previewNetworkPath,
@@ -41,8 +41,8 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	r = StyleService.MakeHTTPHandler(ctx, r, styleTransferService, options...)
 
 	// Product service
-	productService := ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort, storageSaveURL
-		storageFindURL, dbSession)
+	productService := ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort,
+		storageSaveURL, storageFindURL, dbSession)
 	r = ProductService.MakeHTTPHandler(ctx, r, productService, options...)
 
 	// User service
