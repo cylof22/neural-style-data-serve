@@ -29,8 +29,8 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 
 	svc := NewStorageService(dbSession)
 
-	//POST /api/storage/save/v1/{userid}/{imageid}
-	r.Methods("POST").Path("/api/storage/save/v1").Queries("userid", "{userid}", "imageid", "{imageid}").Handler(
+	//POST /api/v1/storage/save/{userid}/{imageid}
+	r.Methods("POST").Path("/api/v1/storage/save").Queries("userid", "{userid}", "imageid", "{imageid}").Handler(
 		httptransport.NewServer(
 			MakeNSStoreEndpoint(svc),
 			decodeNSSaveRequest,
@@ -38,8 +38,8 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 			options...,
 		))
 
-	// GET /api/storage/find/v1/{userid}/{imageid}
-	r.Methods("GET").Path("/api/storage/find/v1").Queries("userid", "{userid}", "imageid", "{imageid}").Handler(
+	// GET /api/v1/storage/find/{userid}/{imageid}
+	r.Methods("GET").Path("/api/v1/storage/find").Queries("userid", "{userid}", "imageid", "{imageid}").Handler(
 		httptransport.NewServer(
 			MakeNSFindEndpoint(svc),
 			decodeNSFindRequest,
