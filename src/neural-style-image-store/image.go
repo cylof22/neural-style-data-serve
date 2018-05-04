@@ -26,7 +26,6 @@ type UploadResult struct {
 	Name           string
 	Location       string
 	StorageAccount string
-	StorageKey     string
 	UploadError    error
 }
 
