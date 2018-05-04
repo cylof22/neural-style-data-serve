@@ -14,7 +14,7 @@ import (
 
 var (
 	cacheHost = flag.String("host", "localhost", "Memecached service host")
-	cachePort = flag.String("port", "6000", "Memecached service port")
+	cachePort = flag.String("port", "9999", "Memecached service port")
 )
 
 func main() {

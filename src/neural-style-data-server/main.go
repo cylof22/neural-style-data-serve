@@ -23,7 +23,7 @@ var (
 	storageServerSaveRouter = flag.String("saveRouter", "/api/v1/storage/save", "URL router for save")
 	storageServerFindRouter = flag.String("findRouter", "/api/v1/storage/find", "URL router for find")
 	cacheServerURL          = flag.String("cacheURL", "localhost", "Cache Server URL")
-	cacheServerPort         = flag.String("cachePort", "6000", "Cache Server Port")
+	cacheServerPort         = flag.String("cachePort", "9999", "Cache Server Port")
 	cacheSaveRouter         = flag.String("cacheSaveRouter", "/api/v1/cache/save", "Cache Save Router")
 	cacheGetRouter          = flag.String("cacheGetURL", "/api/v1/cache/get", "Cache Get Router")
 	networkPath             = flag.String("network", "", "neural network model path")
