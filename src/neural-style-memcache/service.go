@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/bradfitz/gomemcache/memcache"
 )
@@ -17,6 +18,7 @@ func NewCacheService(cacheServer ...string) *CacheService {
 	client := memcache.New(cacheServer...)
 	if client == nil {
 		// Todo: add log for memcache initialize error
+		fmt.Println("Fail to connect to the memcache server")
 	}
 
 	return &CacheService{MemcachedClient: client}
@@ -24,6 +26,7 @@ func NewCacheService(cacheServer ...string) *CacheService {
 
 // AddImage add an image file to the memcached
 func (svc *CacheService) AddImage(key string, img []byte) error {
+	fmt.Println("Start memcache save")
 	imgItem := memcache.Item{Key: key, Value: img}
 	return svc.MemcachedClient.Add(&imgItem)
 }

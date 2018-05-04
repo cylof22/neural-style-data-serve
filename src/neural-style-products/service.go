@@ -9,8 +9,6 @@ import (
 	"image/color"
 	"net/http"
 	"net/url"
-	"os"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -105,18 +103,20 @@ type Artist struct {
 
 // ProductService for final image style transfer
 type ProductService struct {
-	OutputPath string
-	Host       string
-	Port       string
-	Session    *mgo.Session
-	SaveURL    string
-	FindURL    string
+	OutputPath   string
+	Host         string
+	Port         string
+	Session      *mgo.Session
+	SaveURL      string
+	FindURL      string
+	CacheSaveURL string
+	CacheGetURL  string
 }
 
 // NewProductSVC create a new product service
-func NewProductSVC(outputPath, host, port, saveURL, findURL string, session *mgo.Session) *ProductService {
+func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheSaveURL, cacheGetURL string, session *mgo.Session) *ProductService {
 	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session,
-		SaveURL: saveURL, FindURL: findURL}
+		SaveURL: saveURL, FindURL: findURL, CacheSaveURL: cacheGetURL, CacheGetURL: cacheGetURL}
 }
 
 // CompareExpireTimeinSASWithNow compare the generated expire time of a Azure SAS with now
@@ -177,8 +177,6 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 		return "", errors.New("Upload fails")
 	}
 
-	outfilePath := path.Join("./data", picFolder, outfileName)
-
 	watermarkSVC := WaterMark.Service{
 		SourceImg: img,
 		Text:      "tulian",
@@ -187,21 +185,36 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 		Format:    format,
 	}
 
-	outputFile, _ := os.Create(outfilePath)
-	defer outputFile.Close()
-	_, err = watermarkSVC.CreateWaterMark(outputFile)
+	markedBytes := make([]byte, 0, len(baseData))
+	outputBuffers := bytes.NewBuffer(markedBytes)
+
+	_, err = watermarkSVC.CreateWaterMark(outputBuffers)
 	if err != nil {
 		fmt.Println(err.Error())
 		return "", err
 	}
 
+	fmt.Println(outputBuffers.String())
 	// add the memecached item
+	cacheClient := &http.Client{}
+	cacheURL := svc.CacheSaveURL + "?key=" + owner + outfileName
+	cacheReq, err := http.NewRequest("POST", cacheURL, outputBuffers)
+	if err != nil {
+		fmt.Println(err.Error())
+		return "", err
+	}
+	res, err = cacheClient.Do(cacheReq)
+	if err != nil {
+		return "", err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		fmt.Println(res.Status)
+		return "", errors.New("cache fails")
+	}
 
 	// construct the memcached url
-
-	newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
-	fmt.Println("New picuture is created: " + newImageURL)
-	return newImageURL, nil
+	return svc.CacheGetURL + "?key=" + owner + outfileName, nil
 }
 
 // UploadContentFile upload content file to the cloud storage
