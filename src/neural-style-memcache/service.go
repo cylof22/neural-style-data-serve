@@ -1,4 +1,4 @@
-package ImageCache
+package main
 
 import (
 	"errors"
@@ -6,29 +6,30 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
-// Service store the marked cache file in memcached and get the corresponding marked file
-type Service struct {
-	MemcachedURL    []string
+// CacheService store the marked cache file in memcached and get the corresponding marked file
+type CacheService struct {
 	MemcachedClient *memcache.Client
 }
 
-// Init initialize the memcached service
-func (svc *Service) Init() {
+// NewCacheService generate a new storage service
+func NewCacheService(cacheServer ...string) *CacheService {
 	//create a handle
-	svc.MemcachedClient = memcache.New(svc.MemcachedURL...)
-	if svc.MemcachedClient == nil {
+	client := memcache.New(cacheServer...)
+	if client == nil {
 		// Todo: add log for memcache initialize error
 	}
+
+	return &CacheService{MemcachedClient: client}
 }
 
 // AddImage add an image file to the memcached
-func (svc *Service) AddImage(key string, img []byte) error {
+func (svc *CacheService) AddImage(key string, img []byte) error {
 	imgItem := memcache.Item{Key: key, Value: img}
 	return svc.MemcachedClient.Add(&imgItem)
 }
 
 // GetImage get an image file from the memcached
-func (svc *Service) GetImage(key string) ([]byte, error) {
+func (svc *CacheService) GetImage(key string) ([]byte, error) {
 	//get key's value
 	it, err := svc.MemcachedClient.Get(key)
 	if err != nil {
