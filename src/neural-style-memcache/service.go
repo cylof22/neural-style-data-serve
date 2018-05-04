@@ -17,7 +17,7 @@ func (svc *Service) Init() {
 	//create a handle
 	svc.MemcachedClient = memcache.New(svc.MemcachedURL...)
 	if svc.MemcachedClient == nil {
-		// Todo: add memcache initialize error
+		// Todo: add log for memcache initialize error
 	}
 }
 
@@ -30,7 +30,7 @@ func (svc *Service) AddImage(key string, img []byte) error {
 // GetImage get an image file from the memcached
 func (svc *Service) GetImage(key string) ([]byte, error) {
 	//get key's value
-	it, err := svc.MemcachedClient.Get("foo")
+	it, err := svc.MemcachedClient.Get(key)
 	if err != nil {
 		return nil, err
 	}
