@@ -59,7 +59,7 @@ func makeHTTPHandler(ctx context.Context, logger log.Logger) http.Handler {
 	}
 
 	var memcachedURL []string
-	memcachedURL = append(memcachedURL, "http://localhost:11211")
+	memcachedURL = append(memcachedURL, "localhost:11211")
 	svc := NewCacheService(memcachedURL...)
 
 	r.Methods("POST").Path("/api/v1/cache/save").Queries("key", "{key}").Handler(
@@ -70,7 +70,7 @@ func makeHTTPHandler(ctx context.Context, logger log.Logger) http.Handler {
 			options...,
 		))
 
-	r.Methods("GET").Path("api/v1/cache/get").Queries("key", "{key}").Handler(
+	r.Methods("GET").Path("/api/v1/cache/get").Queries("key", "{key}").Handler(
 		httptransport.NewServer(
 			MakeNSImageCacheGetEndpoint(svc),
 			decodeNSCacheGetRequest,
