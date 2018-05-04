@@ -21,6 +21,7 @@ func (svc *StorageService) Save(userID, imgName string, imgData []byte) error {
 	}
 
 	resultChannel := make(chan UploadResult)
+	defer close(resultChannel)
 
 	imgJob := ImageJob{
 		UploadImage:   img,
@@ -33,11 +34,16 @@ func (svc *StorageService) Save(userID, imgName string, imgData []byte) error {
 		return resultInfo.UploadError
 	}
 
+	// update the upload result to the database: {userID + Name : StorageAccount}
 	return nil
 }
 
 // Find return the public access url for downloading the image file during a limited time
 func (svc *StorageService) Find(userID, imgName string) (string, error) {
+
+	// find the StorageAccount for the key: userID + imgName from the database
+
+	// get the shared access url from the azure storage
 
 	return "", nil
 }
