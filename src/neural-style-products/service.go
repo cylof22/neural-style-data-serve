@@ -116,7 +116,7 @@ type ProductService struct {
 // NewProductSVC create a new product service
 func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheSaveURL, cacheGetURL string, session *mgo.Session) *ProductService {
 	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session,
-		SaveURL: saveURL, FindURL: findURL, CacheSaveURL: cacheGetURL, CacheGetURL: cacheGetURL}
+		SaveURL: saveURL, FindURL: findURL, CacheSaveURL: cacheSaveURL, CacheGetURL: cacheGetURL}
 }
 
 // CompareExpireTimeinSASWithNow compare the generated expire time of a Azure SAS with now
@@ -194,7 +194,6 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 		return "", err
 	}
 
-	fmt.Println(outputBuffers.String())
 	// add the memecached item
 	cacheClient := &http.Client{}
 	cacheURL := svc.CacheSaveURL + "?key=" + owner + outfileName
