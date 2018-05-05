@@ -39,7 +39,7 @@ type NSCacheGetRequest struct {
 
 // NSCacheGetResponse define the cached image data
 type NSCacheGetResponse struct {
-	Data  string
+	Data  []byte
 	Error error
 }
 
@@ -48,7 +48,7 @@ func MakeNSImageCacheGetEndpoint(svc *CacheService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSCacheGetRequest)
 		data, err := svc.GetImage(req.Key)
-		return NSCacheGetResponse{Data: string(data), Error: err}, err
+		return NSCacheGetResponse{Data: data, Error: err}, err
 	}
 }
 func makeHTTPHandler(ctx context.Context, logger log.Logger) http.Handler {

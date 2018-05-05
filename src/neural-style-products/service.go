@@ -185,7 +185,10 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 		Format:    format,
 	}
 
-	markedBytes := make([]byte, 0, len(baseData))
+	//markedFile, err := os.Create(outfileName)
+	//defer markedFile.Close()
+
+	markedBytes := make([]byte, 0)
 	outputBuffers := bytes.NewBuffer(markedBytes)
 
 	_, err = watermarkSVC.CreateWaterMark(outputBuffers)
@@ -194,10 +197,19 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 		return "", err
 	}
 
+	imgString := base64.StdEncoding.EncodeToString(outputBuffers.Bytes())
+	imageType := "image/" + format
+	fmt.Println("Image Type " + imageType)
+	imgHeader := "data:" + imageType + ";base64,"
+	imgString = imgHeader + imgString
+
+	fmt.Println(imgString)
+
+	cacheImage := bytes.NewBufferString(imgString)
 	// add the memecached item
 	cacheClient := &http.Client{}
 	cacheURL := svc.CacheSaveURL + "?key=" + owner + outfileName
-	cacheReq, err := http.NewRequest("POST", cacheURL, outputBuffers)
+	cacheReq, err := http.NewRequest("POST", cacheURL, cacheImage)
 	if err != nil {
 		fmt.Println(err.Error())
 		return "", err

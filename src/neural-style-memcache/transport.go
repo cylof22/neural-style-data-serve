@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -46,8 +49,15 @@ func encodeNSCachedGetResponse(ctx context.Context, w http.ResponseWriter, respo
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
-	w.Header().Set("content-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(map[string]interface{}{
-		"data": getRes.Data,
-	})
+	imgString := string(getRes.Data)
+	imageType := strings.TrimSuffix(imgString[5:], ";base64")
+	w.Header().Set("content-type", imageType)
+	length, err := w.Write(getRes.Data)
+
+	fmt.Println(string(getRes.Data))
+	if length == 0 {
+		return errors.New("Empty image")
+	}
+
+	return err
 }
