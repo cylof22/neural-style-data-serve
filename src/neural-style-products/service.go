@@ -197,17 +197,10 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 		return "", err
 	}
 
-	imgString := base64.StdEncoding.EncodeToString(outputBuffers.Bytes())
-	imageType := "image/" + format
-	fmt.Println("Image Type " + imageType)
-	imgHeader := "data:" + imageType + ";base64,"
-	imgString = imgHeader + imgString
-
-	cacheImage := bytes.NewBufferString(imgString)
 	// add the memecached item
 	cacheClient := &http.Client{}
 	cacheURL := svc.CacheSaveURL + "?key=" + owner + outfileName
-	cacheReq, err := http.NewRequest("POST", cacheURL, cacheImage)
+	cacheReq, err := http.NewRequest("POST", cacheURL, outputBuffers)
 	if err != nil {
 		fmt.Println(err.Error())
 		return "", err

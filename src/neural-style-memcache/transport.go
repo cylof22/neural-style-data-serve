@@ -2,14 +2,12 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -51,19 +49,15 @@ func encodeNSCachedGetResponse(ctx context.Context, w http.ResponseWriter, respo
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
-	imgString := string(getRes.Data)
-	imgeArrayString := strings.Split(imgString, ",")
-	imageType := strings.TrimSuffix(imgeArrayString[0][5:], ";base64")
-	imageByte, err := base64.StdEncoding.DecodeString(imgeArrayString[1])
-	imgSize := len(imageByte)
-	fmt.Println(imageType)
-	w.Header().Set("Content-Type", imageType)
+	fmt.Println(getRes.Type)
+	w.Header().Set("Content-Type", getRes.Type)
 	w.Header().Set("Accept-Ranges", "bytes")
+	imgSize := len(getRes.Data)
 	w.Header().Set("Content-Length", strconv.FormatInt(int64(imgSize), 10))
 
-	length, err := w.Write(imageByte)
+	length, err := w.Write(getRes.Data)
 
-	if length != len(imageByte) {
+	if length != len(getRes.Data) {
 		return errors.New("Empty image")
 	}
 
