@@ -64,7 +64,7 @@ func makeHTTPHandler(ctx context.Context, logger log.Logger) http.Handler {
 	memcachedURL = append(memcachedURL, "localhost:11211")
 	svc := NewCacheService(memcachedURL...)
 
-	r.Methods("POST").Path("/api/v1/cache/save").Queries("key", "{key}").Handler(
+	r.Methods("POST").Path("/api/v1/cache/save/{key}").Handler(
 		httptransport.NewServer(
 			MakeNSImageCacheSaveEndpoint(svc),
 			decodeNSCacheSaveRequest,

@@ -199,7 +199,7 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 
 	// add the memecached item
 	cacheClient := &http.Client{}
-	cacheURL := svc.CacheSaveURL + "?key=" + owner + outfileName
+	cacheURL := svc.CacheSaveURL + "/" + owner + outfileName
 	cacheReq, err := http.NewRequest("POST", cacheURL, outputBuffers)
 	if err != nil {
 		fmt.Println(err.Error())
