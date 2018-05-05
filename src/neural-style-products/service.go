@@ -203,8 +203,6 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 	imgHeader := "data:" + imageType + ";base64,"
 	imgString = imgHeader + imgString
 
-	fmt.Println(imgString)
-
 	cacheImage := bytes.NewBufferString(imgString)
 	// add the memecached item
 	cacheClient := &http.Client{}
@@ -225,7 +223,8 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 	}
 
 	// construct the memcached url
-	return svc.CacheGetURL + "?key=" + owner + outfileName, nil
+	fmt.Println("The Cached URL is " + svc.CacheGetURL + "/" + owner + outfileName)
+	return svc.CacheGetURL + "/" + owner + outfileName, nil
 }
 
 // UploadContentFile upload content file to the cloud storage

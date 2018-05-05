@@ -70,7 +70,7 @@ func makeHTTPHandler(ctx context.Context, logger log.Logger) http.Handler {
 			options...,
 		))
 
-	r.Methods("GET").Path("/api/v1/cache/get").Queries("key", "{key}").Handler(
+	r.Methods("GET").Path("/api/v1/cache/get/{key}").Handler(
 		httptransport.NewServer(
 			MakeNSImageCacheGetEndpoint(svc),
 			decodeNSCacheGetRequest,
