@@ -10,7 +10,6 @@ import (
 	"image/color"
 	"mime"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -166,7 +165,7 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 		return "", errors.New("Upload fails")
 	}
 
-	_, err = svc.waterMarkAndCache(img, format, owner+outfileName)
+	_, err = svc.waterMarkAndCache(img, "jpg", owner+outfileName)
 	if err != nil {
 		return "", err
 	}
@@ -391,7 +390,7 @@ func (svc *ProductService) AddImage(key string, img []byte) error {
 // GetImage get an image file from the memcached
 func (svc *ProductService) GetImage(userID, imageID string) ([]byte, string, error) {
 	key := userID + imageID
-	mimeType := mime.TypeByExtension(filepath.Ext(key))
+	mimeType := mime.TypeByExtension("." + "jpg")
 
 	//get key's value
 	it, err := svc.CacheClient.Get(key)
@@ -426,15 +425,14 @@ func (svc *ProductService) GetImage(userID, imageID string) ([]byte, string, err
 		}
 
 		// watermark and cached data
-		img, format, err := image.Decode(imgResponse.Body)
+		img, _, err := image.Decode(imgResponse.Body)
 		if err != nil {
 			fmt.Println("Failed to parse the image data")
 			fmt.Println(err.Error())
 			return nil, "", err
 		}
 
-		imgData, err := svc.waterMarkAndCache(img, format, userID+imageID)
-
+		imgData, err := svc.waterMarkAndCache(img, "jpg", userID+imageID)
 		return imgData, mimeType, nil
 	}
 
@@ -446,6 +444,7 @@ func (svc *ProductService) GetImage(userID, imageID string) ([]byte, string, err
 		return nil, "", errors.New("Unknown Error in memcached for " + key)
 	}
 
+	// All the memory cached image item is jpeg
 	return it.Value, mimeType, nil
 }
 
@@ -466,6 +465,8 @@ func (svc *ProductService) waterMarkAndCache(img image.Image, format, key string
 		fmt.Println(err.Error())
 		return nil, err
 	}
+
+	fmt.Println("Buffer size is " + strconv.Itoa(len(outputBuffers.Bytes())))
 
 	// add the memecached item
 	err = svc.AddImage(key, outputBuffers.Bytes())
