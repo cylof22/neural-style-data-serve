@@ -113,7 +113,7 @@ func (svc *AzureImageStore) Find(userID, fileName string) (string, error) {
 	// Set the desired SAS signature values and sign them with the shared key credentials to get the SAS query parameters.
 	sasQueryParams := azblob.BlobSASSignatureValues{
 		Protocol:      azblob.SASProtocolHTTPS,
-		ExpiryTime:    time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
+		ExpiryTime:    time.Now().UTC().Add(5 * time.Minute), // 48-hours before expiration
 		Permissions:   azblob.BlobSASPermissions{Read: true}.String(),
 		ContainerName: userID,
 		BlobName:      fileName,
@@ -159,7 +159,7 @@ func (svc *AzureImageStore) FindAllByUser(userID string) ([]string, error) {
 		for _, blobInfo := range listBlob.Blobs.Blob {
 			sasQueryParams := azblob.BlobSASSignatureValues{
 				Protocol:      azblob.SASProtocolHTTPS,
-				ExpiryTime:    time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
+				ExpiryTime:    time.Now().UTC().Add(5 * time.Minute), // 48-hours before expiration
 				Permissions:   azblob.AccountSASPermissions{Read: true}.String(),
 				ContainerName: userID,
 				BlobName:      blobInfo.Name,
