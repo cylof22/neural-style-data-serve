@@ -23,6 +23,7 @@ var (
 	storageServerSaveRouter = flag.String("saveRouter", "/api/v1/storage/save", "URL router for save")
 	storageServerFindRouter = flag.String("findRouter", "/api/v1/storage/find", "URL router for find")
 	cacheGetRouter          = flag.String("cacheGetURL", "/api/v1/cache/get", "Cache Get Router")
+	localDev                = flag.Bool("local", false, "Disable Cloud Storage and local Memcached")
 	networkPath             = flag.String("network", "", "neural network model path")
 	previewNetworkPath      = flag.String("previewNetwork", "", "neural network preview model path")
 	outputPath              = flag.String("outputdir", "./", "neural style transfer output directory")
