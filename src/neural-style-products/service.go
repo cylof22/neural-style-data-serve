@@ -10,6 +10,8 @@ import (
 	"image/color"
 	"mime"
 	"net/http"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 
@@ -111,22 +113,29 @@ type ProductService struct {
 	SaveURL     string
 	FindURL     string
 	CacheGetURL string
+	IsLocalDev  bool
 	CacheClient *memcache.Client
 }
 
 // NewProductSVC create a new product service
-func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string, session *mgo.Session) *ProductService {
-	var memcachedURL []string
-	memcachedURL = append(memcachedURL, "localhost:11211")
-	//create a handle
-	client := memcache.New(memcachedURL...)
-	if client == nil {
-		// Todo: add log for memcache initialize error
-		fmt.Println("Fail to connect to the memcache server")
+func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string, localDev bool, session *mgo.Session) *ProductService {
+	var client *memcache.Client
+	if !localDev {
+		var memcachedURL []string
+		memcachedURL = append(memcachedURL, "localhost:11211")
+		//create a handle
+		client = memcache.New(memcachedURL...)
+		if client == nil {
+			// Todo: add log for memcache initialize error
+			fmt.Println("Fail to connect to the memcache server")
+		}
+	} else {
+		client = nil
 	}
 
 	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session,
-		SaveURL: saveURL, FindURL: findURL, CacheGetURL: cacheGetURL, CacheClient: client}
+		SaveURL: saveURL, FindURL: findURL, CacheGetURL: cacheGetURL, IsLocalDev: localDev,
+		CacheClient: client}
 }
 
 // upload picture file
@@ -141,8 +150,35 @@ func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string
 	}
 
 	outfileName := picID + "." + imgFormat
-	storageClient := &http.Client{}
+	// Local FrontEnd Dev version
+	if svc.IsLocalDev {
+		outfilePath := path.Join("./data", picFolder, outfileName)
 
+		imgReader := bytes.NewReader(baseData)
+		// The default image type after image.Decode is jpeg
+		img, _, err := image.Decode(imgReader)
+
+		watermarkSVC := WaterMark.Service{
+			SourceImg: img,
+			Text:      "tulian",
+			TextColor: color.RGBA{0, 0, 255, 255},
+			Scale:     1.0,
+		}
+
+		outputFile, _ := os.Create(outfilePath)
+		defer outputFile.Close()
+		_, err = watermarkSVC.CreateWaterMark(outputFile)
+		if err != nil {
+			fmt.Println(err.Error())
+			return "", err
+		}
+
+		newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
+		fmt.Println("New picuture is created: " + newImageURL)
+		return newImageURL, nil
+	}
+
+	storageClient := &http.Client{}
 	storageURL := svc.SaveURL + "?userid=" + owner + "&imageid=" + outfileName
 	bodyReader := bytes.NewReader(baseData)
 	storageReq, err := http.NewRequest("POST", storageURL, bodyReader)
