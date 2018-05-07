@@ -1,14 +1,14 @@
 package WaterMark
 
 import (
-	"errors"
+	"bytes"
+	"fmt"
 	"image"
 	"image/color"
-	"image/gif"
 	"image/jpeg"
-	"image/png"
 	"io"
 	"os"
+	"strconv"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/inconsolata"
@@ -16,6 +16,9 @@ import (
 
 	"golang.org/x/image/draw"
 )
+
+// ImageSizeLimitation equal to Memcached default size
+const ImageSizeLimitation = 1024000
 
 // Service define the basic information for watermark
 type Service struct {
@@ -73,16 +76,30 @@ func (wm *Service) CreateWaterMark(output io.Writer) (image.Image, error) {
 	offset := image.Point{X: sourceBounds.Max.X - watermarkBounds.Max.X + 25, Y: sourceBounds.Max.Y - watermarkBounds.Max.Y - 4}
 	draw.Draw(markedImage, watermarkBounds.Add(offset), waterMarkImg, image.ZP, draw.Over)
 
-	// output the image
-	switch wm.Format {
-	case "png":
-		err = png.Encode(output, markedImage)
-	case "gif":
-		err = gif.Encode(output, markedImage, &gif.Options{NumColors: 265})
-	case "jpeg":
-		err = jpeg.Encode(output, markedImage, &jpeg.Options{Quality: jpeg.DefaultQuality})
-	default:
-		err = errors.New("Unknown format" + wm.Format)
+	imgSize := len(markedImage.Pix)
+	markedBytes := make([]byte, 0)
+	markedBuffer := bytes.NewBuffer(markedBytes)
+	quality := jpeg.DefaultQuality
+
+	if imgSize > ImageSizeLimitation {
+		// downgrade the image below the 1M size
+		for {
+			err = jpeg.Encode(markedBuffer, markedImage, &jpeg.Options{Quality: quality})
+			imgSize = len(markedBuffer.Bytes())
+			if imgSize < ImageSizeLimitation {
+				break
+			}
+			markedBuffer.Reset()
+			fmt.Println("The image Size is " + strconv.Itoa(imgSize))
+			quality = quality - 10
+		}
+		_, err = output.Write(markedBuffer.Bytes())
+	} else {
+		err = jpeg.Encode(output, markedImage, &jpeg.Options{Quality: 100})
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	return markedImage, err

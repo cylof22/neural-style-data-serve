@@ -77,7 +77,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte("Unauthorized"))
 		} else {
-			fmt.Println("user name is ", username)
 			next.ServeHTTP(w, r)
 		}
 	})

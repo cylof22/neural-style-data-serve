@@ -174,7 +174,6 @@ func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string
 	}
 
 	// construct the memcached url
-	fmt.Println("The Cached URL is " + svc.CacheGetURL + "/" + owner + "/" + outfileName)
 	return svc.CacheGetURL + "/" + owner + "/" + outfileName, nil
 }
 
@@ -456,7 +455,7 @@ func (svc *ProductService) waterMarkAndCache(img image.Image, format, key string
 		SourceImg: img,
 		Text:      "tulian",
 		TextColor: color.RGBA{0, 0, 255, 255},
-		Scale:     5.0,
+		Scale:     1.0,
 		Format:    format,
 	}
 
