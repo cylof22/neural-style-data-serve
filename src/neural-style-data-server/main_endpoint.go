@@ -37,12 +37,16 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	r = StyleService.MakeHTTPHandler(ctx, r, styleTransferService, options...)
 
 	// Product service
-	productService := ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort, dbSession)
-	r = ProductService.MakeHTTPHandler(ctx, r, productService, options...)
+	storageServiceURL := "http://" + *storageServerURL + ":" + *storageServerPort
+	storageSaveURL := storageServiceURL + *storageServerSaveRouter
+	storageFindURL := storageServiceURL + *storageServerFindRouter
 
-	// Database background update service
-	dbUpdateService := ProductService.NewUpdateProductDBSVC(dbSession)
-	dbUpdateService.Run()
+	cacheServiceURL := "http://" + *serverURL + ":" + *serverPort
+	cacheGetURL := cacheServiceURL + *cacheGetRouter
+
+	productService := ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort,
+		storageSaveURL, storageFindURL, cacheGetURL, *localDev, dbSession)
+	r = ProductService.MakeHTTPHandler(ctx, r, productService, options...)
 
 	// User service
 	userService := UserService.NewUserSVC(*serverURL, *serverPort, dbSession)

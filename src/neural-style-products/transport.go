@@ -3,8 +3,10 @@ package ProductService
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"neural-style-util"
 
@@ -66,7 +68,7 @@ func decodeNSGetProductsRequest(_ context.Context, r *http.Request) (interface{}
 
 	var params QueryParams
 	json.Unmarshal(queryBytes, &params)
-	return NSQueryRequest{QueryData:params}, nil
+	return NSQueryRequest{QueryData: params}, nil
 }
 
 func encodeNSGetProductsResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
@@ -125,6 +127,35 @@ func encodeNSGetReviewsByIDResponse(ctx context.Context, w http.ResponseWriter, 
 
 	w.Header().Set("context-type", "application/json, charset=utf8")
 	return json.NewEncoder(w).Encode(reviewsRes.Reviews)
+}
+
+func decodeNSCacheGetRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	userID := vars["usrid"]
+	imageID := vars["imgid"]
+
+	return NSCacheGetRequest{UserID: userID, ImageID: imageID}, nil
+}
+
+func encodeNSCachedGetResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	getRes := response.(NSCacheGetResponse)
+
+	if getRes.Error != nil {
+		// Todo: add error log
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", getRes.Type)
+	imgSize := len(getRes.Data)
+	w.Header().Set("Content-Length", strconv.FormatInt(int64(imgSize), 10))
+
+	length, err := w.Write(getRes.Data)
+
+	if length != len(getRes.Data) {
+		return errors.New("Empty image")
+	}
+
+	return err
 }
 
 // MakeHTTPHandler generate the http handler for the style service handler
@@ -195,6 +226,14 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc *ProductService, op
 		encodeNSGetReviewsByIDResponse,
 		options...,
 	)))
+
+	r.Methods("GET").Path("/api/v1/cache/get/{usrid}/{imgid}").Handler(
+		httptransport.NewServer(
+			MakeNSImageCacheGetEndpoint(svc),
+			decodeNSCacheGetRequest,
+			encodeNSCachedGetResponse,
+			options...,
+		))
 
 	// Todo: Web Service maybe need a seperate server
 	// output file server

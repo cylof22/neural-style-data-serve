@@ -1,4 +1,4 @@
-package ImageStoreService
+package main
 
 import (
 	"os"
@@ -11,15 +11,16 @@ var (
 	MaxWorker = os.Getenv("MAX_WORKERS")
 	// MaxQueue define the size of the cache queue
 	MaxQueue = os.Getenv("MAX_QUEUE")
-	// MaxResultQueue define the size of the cached result queue
-	MaxResultQueue = os.Getenv("MAX_RESULT_QUEUE")
 )
 
-// JobQueue A buffered channel that we can send work requests on.
-var JobQueue chan Image
+// ImageJob define the azure job upload job
+type ImageJob struct {
+	UploadImage   Image
+	ResultChannel chan UploadResult
+}
 
-// UploadResultQueue A buffered channel that send back the upload result
-var UploadResultQueue chan UploadResult
+// JobQueue A buffered channel that we can send work requests on.
+var JobQueue chan ImageJob
 
 // Stores define group of image stores services
 // Azure storage support multiple parallel  store account
@@ -39,14 +40,8 @@ func init() {
 		workerSize = 2
 	}
 
-	resultQueueSize, err := strconv.Atoi(MaxResultQueue)
-	if err != nil {
-		resultQueueSize = 2
-	}
-
 	Stores = make(map[string]*AzureImageStore)
-	JobQueue = make(chan Image, queueSize)
-	UploadResultQueue = make(chan UploadResult, resultQueueSize)
+	JobQueue = make(chan ImageJob, queueSize)
 	Done = make(chan interface{})
 
 	storeDispatcher := NewDispatcher(workerSize)
@@ -56,9 +51,9 @@ func init() {
 // Worker represents the worker that executes the job
 type Worker struct {
 	// WorkerPool define the worker load
-	WorkerPool chan chan Image
+	WorkerPool chan chan ImageJob
 	// JobChannel define the job cache channel
-	JobChannel chan Image
+	JobChannel chan ImageJob
 	quit       chan bool
 
 	// ImageStore service
@@ -66,10 +61,10 @@ type Worker struct {
 }
 
 // NewWorker generate the new worker
-func NewWorker(workerPool chan chan Image) Worker {
+func NewWorker(workerPool chan chan ImageJob) Worker {
 	storeWorker := Worker{
 		WorkerPool: workerPool,
-		JobChannel: make(chan Image),
+		JobChannel: make(chan ImageJob),
 		quit:       make(chan bool),
 		Store:      NewAzureImageStore(),
 	}
@@ -87,20 +82,34 @@ func (w Worker) Start() {
 			w.WorkerPool <- w.JobChannel
 
 			select {
-			case img := <-w.JobChannel:
+			case imgJob := <-w.JobChannel:
 				// we have received a work request.
 				var fileURL string
-				fileURL, err := w.Store.Save(img)
-				if err != nil {
-					// Todo: log the failed operation
+				fileURL, err := w.Store.Save(imgJob.UploadImage)
+				fileName := imgJob.UploadImage.ImageName
+				if len(imgJob.UploadImage.Location) != 0 {
+					fileName = filepath.Base(imgJob.UploadImage.Location)
 				}
 
-				UploadResultQueue <- UploadResult{
-					UserID:   img.UserID,
-					Name:     filepath.Base(img.Location),
-					Location: fileURL,
-					ImageID:  img.ImageID,
+				if err != nil {
+					// Todo: log the failed operation
+					imgJob.ResultChannel <- UploadResult{
+						UserID:         imgJob.UploadImage.UserID,
+						Name:           fileName,
+						Location:       "",
+						UploadError:    err,
+						StorageAccount: w.Store.StorageAccount,
+					}
+				} else {
+					imgJob.ResultChannel <- UploadResult{
+						UserID:         imgJob.UploadImage.UserID,
+						Name:           fileName,
+						Location:       fileURL,
+						UploadError:    nil,
+						StorageAccount: w.Store.StorageAccount,
+					}
 				}
+
 			case <-w.quit:
 				// we have received a signal to stop
 				close(w.JobChannel)
@@ -120,14 +129,14 @@ func (w Worker) Stop() {
 // Dispatcher job schedule
 type Dispatcher struct {
 	// A pool of workers channels that are registered with the dispatcher
-	WorkerPool chan chan Image
+	WorkerPool chan chan ImageJob
 	maxWorker  int
 	workers    []Worker
 }
 
 // NewDispatcher configure the size of Dispatcher
 func NewDispatcher(maxWorkerSize int) *Dispatcher {
-	pool := make(chan chan Image, maxWorkerSize)
+	pool := make(chan chan ImageJob, maxWorkerSize)
 	return &Dispatcher{WorkerPool: pool, maxWorker: maxWorkerSize}
 }
 
@@ -156,7 +165,7 @@ func (d *Dispatcher) dispatch() {
 			return
 		case img := <-JobQueue:
 			// a job request has been received
-			go func(job Image) {
+			go func(job ImageJob) {
 				// try to obtain a worker job channel that is available.
 				// this will block until a worker is idle
 				jobChannel := <-d.WorkerPool

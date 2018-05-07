@@ -1,22 +1,29 @@
 package ProductService
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/url"
-	"neural-style-image-store"
+	"image"
+	"image/color"
+	"mime"
+	"net/http"
+	"os"
 	"path"
 	"strconv"
 	"strings"
-	"time"
 
+	"neural-style-image-watermark"
 	"neural-style-util"
 
+	"github.com/bradfitz/gomemcache/memcache"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
+
+var memCacheServices = os.Getenv("MEMCACHE_SERVICES")
 
 // ProductStory define the background story of the image
 type ProductStory struct {
@@ -101,96 +108,122 @@ type Artist struct {
 
 // ProductService for final image style transfer
 type ProductService struct {
-	OutputPath string
-	Host       string
-	Port       string
-	Session    *mgo.Session
+	OutputPath  string
+	Host        string
+	Port        string
+	Session     *mgo.Session
+	SaveURL     string
+	FindURL     string
+	CacheGetURL string
+	IsLocalDev  bool
+	CacheClient *memcache.Client
 }
 
 // NewProductSVC create a new product service
-func NewProductSVC(outputPath, host, port string, session *mgo.Session) *ProductService {
-	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session}
-}
-
-// CompareExpireTimeinSASWithNow compare the generated expire time of a Azure SAS with now
-// True for 1 seconds later than now
-func CompareExpireTimeinSASWithNow(sasURL string) bool {
-	u, err := url.Parse(sasURL)
-	if err == nil {
-		urlQuery, err := url.ParseQuery(u.RawQuery)
-		if err == nil {
-			seArrays := urlQuery["se"]
-			if len(seArrays) != 0 {
-				expireTime, err := time.Parse(time.RFC3339, seArrays[0])
-				if err != nil {
-					fmt.Println("Time Parse error")
-				}
-				diff := expireTime.Sub(time.Now())
-				return diff.Seconds() > 1
-			}
+func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string, localDev bool, session *mgo.Session) *ProductService {
+	var client *memcache.Client
+	if !localDev {
+		var memcachedURL []string
+		if len(memCacheServices) == 0 {
+			memcachedURL = append(memcachedURL, "localhost:11211")
+		} else {
+			memcachedURL = strings.Split(memCacheServices, ";")
 		}
+
+		//create a handle
+		client = memcache.New(memcachedURL...)
+		if client == nil {
+			// Todo: add log for memcache initialize error
+			fmt.Println("Fail to connect to the memcache server")
+		}
+	} else {
+		client = nil
 	}
 
-	return false
-}
-
-func updateProductURL(session *mgo.Session, storageAccount, expiredURL, owner, imgID string) error {
-	// parse the file name
-	u, err := url.Parse(expiredURL)
-	if err != nil {
-		fmt.Println(err)
-	}
-	paths := strings.Split(u.Path, "/")
-	if len(paths) == 0 {
-		fmt.Println("File Name parse error")
-	}
-
-	fileName := paths[len(paths)-1]
-
-	storeSVC := ImageStoreService.Stores[storageAccount]
-	url, err := storeSVC.Find(owner, fileName)
-	if err != nil {
-		fmt.Println("Failed to created the Azure SAS for " + owner + fileName)
-	}
-
-	// check the database
-	cpSession := session.Copy()
-	defer cpSession.Close()
-
-	c := cpSession.DB("store").C("products")
-	return c.Update(bson.M{"id": imgID}, bson.M{"$set": bson.M{"url": url}})
+	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session,
+		SaveURL: saveURL, FindURL: findURL, CacheGetURL: cacheGetURL, IsLocalDev: localDev,
+		CacheClient: client}
 }
 
 // upload picture file
-func uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
-	outfileName := picID + ".png"
-	outfilePath := path.Join("./data", picFolder, outfileName)
-
+func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string) (string, error) {
 	pos := strings.Index(picData, ",")
+	imgFormat := picData[11 : pos-7]
 	realData := picData[pos+1 : len(picData)]
-	baseData, _ := base64.StdEncoding.DecodeString(realData)
-	err := ioutil.WriteFile(outfilePath, baseData, 0644)
+
+	baseData, err := base64.StdEncoding.DecodeString(realData)
 	if err != nil {
 		return "", err
 	}
 
-	// upload file to the azure storage
-	img := ImageStoreService.Image{
-		UserID:   owner,
-		Location: outfilePath,
-		ImageID:  picID,
-	}
-	ImageStoreService.JobQueue <- img
+	outfileName := picID + "." + imgFormat
+	// Local FrontEnd Dev version
+	if svc.IsLocalDev {
+		outfilePath := path.Join("./data", picFolder, outfileName)
 
-	newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
-	fmt.Println("New picuture is created: " + newImageURL)
-	return newImageURL, nil
+		imgReader := bytes.NewReader(baseData)
+		// The default image type after image.Decode is jpeg
+		img, _, err := image.Decode(imgReader)
+
+		watermarkSVC := WaterMark.Service{
+			SourceImg: img,
+			Text:      "El-force",
+			TextColor: color.RGBA{255, 255, 255, 255},
+			Scale:     1.0,
+		}
+
+		outputFile, _ := os.Create(outfilePath)
+		defer outputFile.Close()
+		_, err = watermarkSVC.CreateWaterMark(outputFile)
+		if err != nil {
+			fmt.Println(err.Error())
+			return "", err
+		}
+
+		newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
+		fmt.Println("New picuture is created: " + newImageURL)
+		return newImageURL, nil
+	}
+
+	storageClient := &http.Client{}
+	storageURL := svc.SaveURL + "?userid=" + owner + "&imageid=" + outfileName
+	bodyReader := bytes.NewReader(baseData)
+	storageReq, err := http.NewRequest("POST", storageURL, bodyReader)
+	if err != nil {
+		fmt.Println("Construct IO reader fails")
+		return "", err
+	}
+
+	res, err := storageClient.Do(storageReq)
+	if err != nil {
+		fmt.Println(err.Error())
+		return "", err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return "", errors.New("Upload fails")
+	}
+
+	imgReader := bytes.NewReader(baseData)
+	// The default image type after image.Decode is jpeg
+	img, _, err := image.Decode(imgReader)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = svc.waterMarkAndCache(img, "jpeg", owner+outfileName)
+	if err != nil {
+		return "", err
+	}
+
+	// construct the memcached url
+	return svc.CacheGetURL + "/" + owner + "/" + outfileName, nil
 }
 
 // UploadContentFile upload content file to the cloud storage
 func (svc *ProductService) UploadContentFile(productData Product) (Product, error) {
 	imageID := NSUtil.UniqueID()
-	newImageURL, err := uploadPicutre(productData.Owner, productData.URL, imageID, "contents")
+	newImageURL, err := svc.uploadPicture(productData.Owner, productData.URL, imageID, "contents")
 
 	newContent := Product{ID: imageID}
 	if err != nil {
@@ -205,7 +238,7 @@ func (svc *ProductService) UploadContentFile(productData Product) (Product, erro
 // UploadStyleFile upload style file to the cloud storage
 func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, error) {
 	imageID := NSUtil.UniqueID()
-	newImageURL, err := uploadPicutre(productData.Owner, productData.PicData, imageID, "styles")
+	newImageURL, err := svc.uploadPicture(productData.Owner, productData.PicData, imageID, "styles")
 
 	// The product's URL is a cached local image url, it will be updated by listening the ImageStoreService
 	// UploadResult Channel asychonously
@@ -227,7 +260,7 @@ func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, 
 	newProduct.Story.Pictures = productData.Story.Pictures
 	for index, pic := range productData.Story.Pictures {
 		picId := NSUtil.UniqueID()
-		picURL, err := uploadPicutre(productData.Owner, pic, picId, "styles")
+		picURL, err := svc.uploadPicture(productData.Owner, pic, picId, "styles")
 		if err == nil {
 			newProduct.Story.Pictures[index] = picURL
 		} else {
@@ -241,6 +274,7 @@ func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, 
 	return newProduct, nil
 }
 
+// UploadStyleFiles upload style file
 func (svc *ProductService) UploadStyleFiles(products BatchProducts) (string, error) {
 	for index, picData := range products.PicDatas {
 		var uploadData UploadProduct
@@ -307,12 +341,6 @@ func (svc *ProductService) GetProducts(params QueryParams) ([]Product, error) {
 		return products, errors.New("Database error")
 	}
 
-	// update all the expired storage urls
-	for _, prod := range products {
-		if !CompareExpireTimeinSASWithNow(prod.URL) {
-			go updateProductURL(svc.Session, "tulian", prod.URL, prod.Owner, prod.ID)
-		}
-	}
 	return products, nil
 }
 
@@ -329,9 +357,8 @@ func (svc *ProductService) GetProductsByID(id string) (Product, error) {
 		return Product{}, errors.New("Database error")
 	}
 
-	if !CompareExpireTimeinSASWithNow(product.URL) {
-		go updateProductURL(svc.Session, "tulian", product.URL, product.Owner, product.ID)
-	}
+	// get the memcached image data, if cache missing, get the url from the backend storage,
+	// watermark the file, and add to the memcache
 
 	if product.ID != id {
 		return Product{}, errors.New("Failed to find product for the id: " + id)
@@ -399,31 +426,99 @@ func (svc *ProductService) GetHotestArtists() ([]Artist, error) {
 	return artists, nil
 }
 
-// UpdateProductDBService update the backend database by accept channel message
-type UpdateProductDBService struct {
-	Session *mgo.Session
+// AddImage add an image file to the memcached
+func (svc *ProductService) AddImage(key string, img []byte) error {
+	imgItem := memcache.Item{Key: key, Value: img}
+	return svc.CacheClient.Add(&imgItem)
 }
 
-// NewUpdateProductDBSVC create a new background update service
-func NewUpdateProductDBSVC(session *mgo.Session) *UpdateProductDBService {
-	return &UpdateProductDBService{Session: session}
-}
+// GetImage get an image file from the memcached
+func (svc *ProductService) GetImage(userID, imageID string) ([]byte, string, error) {
+	key := userID + imageID
+	mimeType := mime.TypeByExtension("." + "jpg")
 
-// Run update the database through the channel
-func (svc *UpdateProductDBService) Run() {
-	go func() {
-		for {
-			select {
-			case updateInfo := <-ImageStoreService.UploadResultQueue:
-				go func(session *mgo.Session, imgID, url string) {
-					// check the database
-					cpSession := session.Copy()
-					defer cpSession.Close()
+	//get key's value
+	it, err := svc.CacheClient.Get(key)
 
-					c := cpSession.DB("store").C("products")
-					c.Update(bson.M{"id": imgID}, bson.M{"$set": bson.M{"url": url}})
-				}(svc.Session, updateInfo.ImageID, updateInfo.Location)
-			}
+	// re add the image again
+	if err == memcache.ErrCacheMiss {
+		storageClient := &http.Client{}
+		storageURL := svc.FindURL + "?userid=" + userID + "&imageid=" + imageID
+
+		storageReq, err := http.NewRequest("GET", storageURL, nil)
+		if err != nil {
+			fmt.Println(err.Error())
+			return nil, "", err
 		}
-	}()
+		res, err := storageClient.Do(storageReq)
+		if err != nil {
+			return nil, "", err
+		}
+
+		var urlData map[string]string
+		err = json.NewDecoder(res.Body).Decode(&urlData)
+		if err != nil {
+			fmt.Println("Failed to parse the url")
+			return nil, "", err
+		}
+
+		// get the image data
+		imgResponse, err := http.Get(urlData["url"])
+		if err != nil {
+			fmt.Println("Failed to get the storage data")
+			return nil, "", err
+		}
+
+		// watermark and cached data
+		img, _, err := image.Decode(imgResponse.Body)
+		if err != nil {
+			fmt.Println("Failed to parse the image data")
+			fmt.Println(err.Error())
+			return nil, "", err
+		}
+
+		imgData, err := svc.waterMarkAndCache(img, "jpeg", userID+imageID)
+		return imgData, mimeType, nil
+	}
+
+	if err != nil {
+		return nil, "", err
+	}
+
+	if string(it.Key) != key {
+		return nil, "", errors.New("Unknown Error in memcached for " + key)
+	}
+
+	// All the memory cached image item is jpeg
+	return it.Value, mimeType, nil
+}
+
+func (svc *ProductService) waterMarkAndCache(img image.Image, format, key string) ([]byte, error) {
+	watermarkSVC := WaterMark.Service{
+		SourceImg: img,
+		Text:      "El-force",
+		TextColor: color.RGBA{255, 255, 255, 255},
+		Scale:     1.0,
+		Format:    format,
+	}
+
+	markedBytes := make([]byte, 0)
+	outputBuffers := bytes.NewBuffer(markedBytes)
+
+	_, err := watermarkSVC.CreateWaterMark(outputBuffers)
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil, err
+	}
+
+	fmt.Println("Buffer size is " + strconv.Itoa(len(outputBuffers.Bytes())))
+
+	// add the memecached item
+	err = svc.AddImage(key, outputBuffers.Bytes())
+	if err != nil {
+		fmt.Println("Cache Fails")
+		return nil, err
+	}
+
+	return outputBuffers.Bytes(), nil
 }
