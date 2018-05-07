@@ -49,5 +49,6 @@ func encodeNSFindResponse(ctx context.Context, w http.ResponseWriter, response i
 	}
 
 	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(findRes)
+	url := map[string]string{"url": findRes.URL}
+	return json.NewEncoder(w).Encode(url)
 }

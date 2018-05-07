@@ -94,17 +94,19 @@ func (w Worker) Start() {
 				if err != nil {
 					// Todo: log the failed operation
 					imgJob.ResultChannel <- UploadResult{
-						UserID:      imgJob.UploadImage.UserID,
-						Name:        fileName,
-						Location:    "",
-						UploadError: err,
+						UserID:         imgJob.UploadImage.UserID,
+						Name:           fileName,
+						Location:       "",
+						UploadError:    err,
+						StorageAccount: w.Store.StorageAccount,
 					}
 				} else {
 					imgJob.ResultChannel <- UploadResult{
-						UserID:      imgJob.UploadImage.UserID,
-						Name:        fileName,
-						Location:    fileURL,
-						UploadError: nil,
+						UserID:         imgJob.UploadImage.UserID,
+						Name:           fileName,
+						Location:       fileURL,
+						UploadError:    nil,
+						StorageAccount: w.Store.StorageAccount,
 					}
 				}
 

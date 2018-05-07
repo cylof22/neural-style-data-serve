@@ -53,9 +53,7 @@ func (svc *StorageService) Save(userID, imgName string, imgData []byte) error {
 		Key:     resultInfo.UserID + resultInfo.Name,
 		Account: resultInfo.StorageAccount,
 	}
-	err := c.Insert(info)
-
-	return err
+	return c.Insert(info)
 }
 
 // Find return the public access url for downloading the image file during a limited time
@@ -68,9 +66,16 @@ func (svc *StorageService) Find(userID, imgName string) (string, error) {
 
 	var info StorageInfo
 	// find the StorageAccount for the key: userID + imgName from the database
-	c.Find(bson.M{"key": key}).One(&info)
+	err := c.Find(bson.M{"key": key}).One(&info)
+	if err != nil {
+		return "", err
+	}
 
 	// get the shared access url from the azure storage
 	url, err := Stores[info.Account].Find(userID, imgName)
+	if err != nil {
+		return "", err
+	}
+
 	return url, err
 }

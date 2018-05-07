@@ -62,6 +62,19 @@ type NSGetArtistsResponse struct {
 	Err     error
 }
 
+// NSCacheGetRequest define request key
+type NSCacheGetRequest struct {
+	UserID  string
+	ImageID string
+}
+
+// NSCacheGetResponse define the cached image data
+type NSCacheGetResponse struct {
+	Data  []byte
+	Type  string
+	Error error
+}
+
 // MakeNSContentUploadEndpoint upload the content file
 func MakeNSContentUploadEndpoint(svc *ProductService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -129,5 +142,14 @@ func MakeNSGetHotestArtists(svc *ProductService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		hotestArtists, err := svc.GetHotestArtists()
 		return NSGetArtistsResponse{Artists: hotestArtists, Err: err}, err
+	}
+}
+
+// MakeNSImageCacheGetEndpoint define the endpoint for image cache get
+func MakeNSImageCacheGetEndpoint(svc *ProductService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSCacheGetRequest)
+		data, mimeType, err := svc.GetImage(req.UserID, req.ImageID)
+		return NSCacheGetResponse{Data: data, Type: mimeType, Error: err}, err
 	}
 }
