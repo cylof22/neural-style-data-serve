@@ -130,21 +130,17 @@ func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string,
 }
 
 // upload picture file
-func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string) (string, error) {
+func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string) (string, error) {
 	pos := strings.Index(picData, ",")
+	imgFormat := picData[11 : pos-7]
 	realData := picData[pos+1 : len(picData)]
+
 	baseData, err := base64.StdEncoding.DecodeString(realData)
 	if err != nil {
 		return "", err
 	}
 
-	imgReader := bytes.NewReader(baseData)
-	img, format, err := image.Decode(imgReader)
-	if err != nil {
-		return "", err
-	}
-	outfileName := picID + "." + format
-
+	outfileName := picID + "." + imgFormat
 	storageClient := &http.Client{}
 
 	storageURL := svc.SaveURL + "?userid=" + owner + "&imageid=" + outfileName
@@ -165,7 +161,14 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 		return "", errors.New("Upload fails")
 	}
 
-	_, err = svc.waterMarkAndCache(img, "jpg", owner+outfileName)
+	imgReader := bytes.NewReader(baseData)
+	// The default image type after image.Decode is jpeg
+	img, _, err := image.Decode(imgReader)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = svc.waterMarkAndCache(img, "jpeg", owner+outfileName)
 	if err != nil {
 		return "", err
 	}
@@ -178,7 +181,7 @@ func (svc *ProductService) uploadPicutre(owner, picData, picID, picFolder string
 // UploadContentFile upload content file to the cloud storage
 func (svc *ProductService) UploadContentFile(productData Product) (Product, error) {
 	imageID := NSUtil.UniqueID()
-	newImageURL, err := svc.uploadPicutre(productData.Owner, productData.URL, imageID, "contents")
+	newImageURL, err := svc.uploadPicture(productData.Owner, productData.URL, imageID, "contents")
 
 	newContent := Product{ID: imageID}
 	if err != nil {
@@ -193,7 +196,7 @@ func (svc *ProductService) UploadContentFile(productData Product) (Product, erro
 // UploadStyleFile upload style file to the cloud storage
 func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, error) {
 	imageID := NSUtil.UniqueID()
-	newImageURL, err := svc.uploadPicutre(productData.Owner, productData.PicData, imageID, "styles")
+	newImageURL, err := svc.uploadPicture(productData.Owner, productData.PicData, imageID, "styles")
 
 	// The product's URL is a cached local image url, it will be updated by listening the ImageStoreService
 	// UploadResult Channel asychonously
@@ -215,7 +218,7 @@ func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, 
 	newProduct.Story.Pictures = productData.Story.Pictures
 	for index, pic := range productData.Story.Pictures {
 		picId := NSUtil.UniqueID()
-		picURL, err := svc.uploadPicutre(productData.Owner, pic, picId, "styles")
+		picURL, err := svc.uploadPicture(productData.Owner, pic, picId, "styles")
 		if err == nil {
 			newProduct.Story.Pictures[index] = picURL
 		} else {
@@ -432,7 +435,7 @@ func (svc *ProductService) GetImage(userID, imageID string) ([]byte, string, err
 			return nil, "", err
 		}
 
-		imgData, err := svc.waterMarkAndCache(img, "jpg", userID+imageID)
+		imgData, err := svc.waterMarkAndCache(img, "jpeg", userID+imageID)
 		return imgData, mimeType, nil
 	}
 
