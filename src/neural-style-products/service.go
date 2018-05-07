@@ -10,11 +10,9 @@ import (
 	"image/color"
 	"mime"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"neural-style-image-watermark"
 	"neural-style-util"
@@ -130,28 +128,6 @@ func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string,
 
 	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session,
 		SaveURL: saveURL, FindURL: findURL, CacheGetURL: cacheGetURL, CacheClient: client}
-}
-
-// CompareExpireTimeinSASWithNow compare the generated expire time of a Azure SAS with now
-// True for 1 seconds later than now
-func CompareExpireTimeinSASWithNow(sasURL string) bool {
-	u, err := url.Parse(sasURL)
-	if err == nil {
-		urlQuery, err := url.ParseQuery(u.RawQuery)
-		if err == nil {
-			seArrays := urlQuery["se"]
-			if len(seArrays) != 0 {
-				expireTime, err := time.Parse(time.RFC3339, seArrays[0])
-				if err != nil {
-					fmt.Println("Time Parse error")
-				}
-				diff := expireTime.Sub(time.Now())
-				return diff.Seconds() > 1
-			}
-		}
-	}
-
-	return false
 }
 
 // upload picture file
