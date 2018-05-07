@@ -167,8 +167,8 @@ func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string
 
 		watermarkSVC := WaterMark.Service{
 			SourceImg: img,
-			Text:      "tulian",
-			TextColor: color.RGBA{0, 0, 255, 255},
+			Text:      "El-force",
+			TextColor: color.RGBA{255, 255, 255, 255},
 			Scale:     1.0,
 		}
 
@@ -496,8 +496,8 @@ func (svc *ProductService) GetImage(userID, imageID string) ([]byte, string, err
 func (svc *ProductService) waterMarkAndCache(img image.Image, format, key string) ([]byte, error) {
 	watermarkSVC := WaterMark.Service{
 		SourceImg: img,
-		Text:      "tulian",
-		TextColor: color.RGBA{0, 0, 255, 255},
+		Text:      "El-force",
+		TextColor: color.RGBA{255, 255, 255, 255},
 		Scale:     1.0,
 		Format:    format,
 	}
