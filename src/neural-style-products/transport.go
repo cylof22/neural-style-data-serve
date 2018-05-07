@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -146,7 +145,6 @@ func encodeNSCachedGetResponse(ctx context.Context, w http.ResponseWriter, respo
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
-	fmt.Println(getRes.Type)
 	w.Header().Set("Content-Type", getRes.Type)
 	imgSize := len(getRes.Data)
 	w.Header().Set("Content-Length", strconv.FormatInt(int64(imgSize), 10))
