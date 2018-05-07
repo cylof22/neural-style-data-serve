@@ -23,6 +23,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+var memCacheServices = os.Getenv("MEMCACHE_SERVICES")
+
 // ProductStory define the background story of the image
 type ProductStory struct {
 	Description string   `json:"description"`
@@ -122,7 +124,12 @@ func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string,
 	var client *memcache.Client
 	if !localDev {
 		var memcachedURL []string
-		memcachedURL = append(memcachedURL, "localhost:11211")
+		if len(memCacheServices) == 0 {
+			memcachedURL = append(memcachedURL, "localhost:11211")
+		} else {
+			memcachedURL = strings.Split(memCacheServices, ";")
+		}
+
 		//create a handle
 		client = memcache.New(memcachedURL...)
 		if client == nil {
