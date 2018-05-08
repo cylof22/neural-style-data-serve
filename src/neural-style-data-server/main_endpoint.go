@@ -45,7 +45,6 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	cacheGetURL := cacheServiceURL + *cacheGetRouter
 
 	var prods ProductService.Service
-
 	prods = ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort,
 		storageSaveURL, storageFindURL, cacheGetURL, *localDev, dbSession)
 
@@ -53,8 +52,10 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	r = ProductService.MakeHTTPHandler(ctx, r, prods, options...)
 
 	// User service
-	userService := UserService.NewUserSVC(*serverURL, *serverPort, dbSession)
-	r = UserService.MakeHTTPHandler(ctx, r, userService, options...)
+	var users UserService.Service
+	users = UserService.NewUserSVC(*serverURL, *serverPort, dbSession)
+	users = UserService.NewLoggingService(log.With(logger, "component", "product"), users)
+	r = UserService.MakeHTTPHandler(ctx, r, users, options...)
 
 	return r
 }

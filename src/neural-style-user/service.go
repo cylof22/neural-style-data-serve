@@ -27,6 +27,12 @@ type UserToken struct {
 	Token string `json:"token"`
 }
 
+// Service define the basic login interface
+type Service interface {
+	Register(userData UserInfo) (string, error)
+	Login(loginData UserInfo) (UserToken, error)
+}
+
 // UserService for user login service
 type UserService struct {
 	Host    string

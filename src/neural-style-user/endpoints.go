@@ -24,7 +24,7 @@ type NSLoginResponse struct {
 }
 
 // MakeNSRegisterEndpoint generate the endpoint for new user register
-func MakeNSRegisterEndpoint(svc *UserService) endpoint.Endpoint {
+func MakeNSRegisterEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSAuthenticationRequest)
 		res, err := svc.Register(req.UserData)
@@ -33,7 +33,7 @@ func MakeNSRegisterEndpoint(svc *UserService) endpoint.Endpoint {
 }
 
 // MakeNSLoginEndpoint generate the endpoint for user's login
-func MakeNSLoginEndpoint(svc *UserService) endpoint.Endpoint {
+func MakeNSLoginEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSAuthenticationRequest)
 		token, err := svc.Login(req.UserData)
