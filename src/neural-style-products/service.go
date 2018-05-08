@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-kit/kit/log/level"
+
 	"neural-style-image-watermark"
 	"neural-style-util"
 
@@ -150,8 +152,7 @@ func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string,
 		//create a handle
 		client = memcache.New(memcachedURL...)
 		if client == nil {
-			// Todo: add log for memcache initialize error
-			fmt.Println("Fail to connect to the memcache server")
+			level.Error(logger).Log("memcache", "Failed to connect to the memcache server")
 		}
 	} else {
 		client = nil
@@ -198,7 +199,7 @@ func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string
 		}
 
 		newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
-		fmt.Println("New picuture is created: " + newImageURL)
+		level.Debug(svc.Logger).Log("Picture URL", newImageURL)
 		return newImageURL, nil
 	}
 
@@ -207,13 +208,13 @@ func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string
 	bodyReader := bytes.NewReader(baseData)
 	storageReq, err := http.NewRequest("POST", storageURL, bodyReader)
 	if err != nil {
-		fmt.Println("Construct IO reader fails")
+		level.Debug(svc.Logger).Log("Storage", storageURL, "err", "request construct fails")
 		return "", err
 	}
 
 	res, err := storageClient.Do(storageReq)
 	if err != nil {
-		fmt.Println(err.Error())
+		level.Debug(svc.Logger).Log("Storage", "request fails")
 		return "", err
 	}
 
@@ -293,6 +294,7 @@ func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, 
 
 // UploadStyleFiles upload style file
 func (svc *ProductService) UploadStyleFiles(products BatchProducts) (string, error) {
+	uploadSize := 0
 	for index, picData := range products.PicDatas {
 		var uploadData UploadProduct
 		uploadData.Owner = products.Owner
@@ -304,11 +306,17 @@ func (svc *ProductService) UploadStyleFiles(products BatchProducts) (string, err
 
 		_, err := svc.UploadStyleFile(uploadData)
 		if err != nil {
-			fmt.Println(err)
-			return "Number" + strconv.Itoa(index) + " is failed to upload", err
+			level.Debug(svc.Logger).Log("Uploads", "fail to upload",
+				"info", "Number"+strconv.Itoa(index)+" is failed to upload")
+			continue
 		}
+
+		uploadSize++
 	}
 
+	if uploadSize == 0 {
+		return "all fails", errors.New("All upload fails")
+	}
 	return "succeed", nil
 }
 
@@ -353,8 +361,7 @@ func (svc *ProductService) GetProducts(params QueryParams) ([]Product, error) {
 	query := getQueryBSon(params)
 	err := c.Find(query).All(&products)
 	if err != nil {
-		// Add log information here
-		fmt.Println(err)
+		level.Debug(svc.Logger).Log("API", "GetProducts", "info", err.Error(), "categories", params.Categories, "owners", params.Owner)
 		return products, errors.New("Database error")
 	}
 
@@ -370,12 +377,9 @@ func (svc *ProductService) GetProductsByID(id string) (Product, error) {
 	var product Product
 	err := c.Find(bson.M{"id": id}).One(&product)
 	if err != nil {
-		fmt.Println(err)
+		level.Debug(svc.Logger).Log("API", "GetProductsByID", "info", err.Error(), "id", id)
 		return Product{}, errors.New("Database error")
 	}
-
-	// get the memcached image data, if cache missing, get the url from the backend storage,
-	// watermark the file, and add to the memcache
 
 	if product.ID != id {
 		return Product{}, errors.New("Failed to find product for the id: " + id)
@@ -396,7 +400,7 @@ func (svc *ProductService) GetReviewsByProductID(id string) ([]Review, error) {
 	err := c.Find(bson.M{"productId": id}).All(&reviews)
 	if err != nil {
 		// Add log information here
-		fmt.Println(err)
+		level.Debug(svc.Logger).Log("API", "GetReviewsByProductID", "info", err.Error(), "id", id)
 		return reviews, errors.New("Database error")
 	}
 
@@ -417,8 +421,7 @@ func (svc *ProductService) GetArtists() ([]Artist, error) {
 	var artists []Artist
 	err := c.Find(bson.M{}).All(&artists)
 	if err != nil {
-		// Add log information here
-		fmt.Println(err)
+		level.Debug(svc.Logger).Log("API", "GetArtists", "info", err.Error())
 		return artists, errors.New("Database error")
 	}
 
@@ -435,8 +438,7 @@ func (svc *ProductService) GetHotestArtists() ([]Artist, error) {
 	var artists []Artist
 	err := c.Find(bson.M{}).All(&artists)
 	if err != nil {
-		// Add log information here
-		fmt.Println(err)
+		level.Debug(svc.Logger).Log("API", "GetHotestArtists", "info", err.Error())
 		return artists, errors.New("Database error")
 	}
 
@@ -464,7 +466,7 @@ func (svc *ProductService) GetImage(userID, imageID string) ([]byte, string, err
 
 		storageReq, err := http.NewRequest("GET", storageURL, nil)
 		if err != nil {
-			fmt.Println(err.Error())
+			level.Debug(svc.Logger).Log("API", "GetCloudImage", "info", err.Error(), "url", storageURL)
 			return nil, "", err
 		}
 		res, err := storageClient.Do(storageReq)
@@ -475,22 +477,21 @@ func (svc *ProductService) GetImage(userID, imageID string) ([]byte, string, err
 		var urlData map[string]string
 		err = json.NewDecoder(res.Body).Decode(&urlData)
 		if err != nil {
-			fmt.Println("Failed to parse the url")
+			level.Debug(svc.Logger).Log("API", "GetCloudImageURL", "info", err.Error())
 			return nil, "", err
 		}
 
 		// get the image data
 		imgResponse, err := http.Get(urlData["url"])
 		if err != nil {
-			fmt.Println("Failed to get the storage data")
+			level.Debug(svc.Logger).Log("API", "GetCloudImageData", "info", err.Error())
 			return nil, "", err
 		}
 
 		// watermark and cached data
 		img, _, err := image.Decode(imgResponse.Body)
 		if err != nil {
-			fmt.Println("Failed to parse the image data")
-			fmt.Println(err.Error())
+			level.Debug(svc.Logger).Log("API", "ParseImageData", "info", err.Error())
 			return nil, "", err
 		}
 
@@ -524,16 +525,14 @@ func (svc *ProductService) waterMarkAndCache(img image.Image, format, key string
 
 	_, err := watermarkSVC.CreateWaterMark(outputBuffers)
 	if err != nil {
-		fmt.Println(err.Error())
+		level.Debug(svc.Logger).Log("API", "CreateWaterMark", "info", err.Error())
 		return nil, err
 	}
-
-	fmt.Println("Buffer size is " + strconv.Itoa(len(outputBuffers.Bytes())))
 
 	// add the memecached item
 	err = svc.AddImage(key, outputBuffers.Bytes())
 	if err != nil {
-		fmt.Println("Cache Fails")
+		level.Error(svc.Logger).Log("API", "CacheImage", "info", err.Error())
 		return nil, err
 	}
 
