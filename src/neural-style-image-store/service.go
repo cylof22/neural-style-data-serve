@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/go-kit/kit/log"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -14,6 +15,7 @@ type Service interface {
 // StorageService define the basic storage service
 type StorageService struct {
 	dbSession *mgo.Session
+	logger    log.Logger
 }
 
 // StorageInfo define the azure storage account information
@@ -23,8 +25,8 @@ type StorageInfo struct {
 }
 
 // NewStorageService generate a new storage service
-func NewStorageService(session *mgo.Session) *StorageService {
-	return &StorageService{dbSession: session}
+func NewStorageService(session *mgo.Session, logger log.Logger) *StorageService {
+	return &StorageService{dbSession: session, logger: logger}
 }
 
 // Save store the target image file to cloud storage

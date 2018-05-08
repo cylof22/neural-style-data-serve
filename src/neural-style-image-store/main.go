@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	mgo "gopkg.in/mgo.v2"
 )
 
@@ -38,6 +39,7 @@ func main() {
 	var logger log.Logger
 	{
 		logger = log.NewLogfmtLogger(os.Stderr)
+		level.NewFilter(logger, level.AllowInfo())
 		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}

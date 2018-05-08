@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"neural-style-util"
 
+	"github.com/go-kit/kit/log"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -38,11 +39,12 @@ type UserService struct {
 	Host    string
 	Port    string
 	Session *mgo.Session
+	Logger  log.Logger
 }
 
 // NewUserSVC create a new user service
-func NewUserSVC(host, port string, session *mgo.Session) *UserService {
-	return &UserService{Host: host, Port: port, Session: session}
+func NewUserSVC(host, port string, logger log.Logger, session *mgo.Session) *UserService {
+	return &UserService{Host: host, Port: port, Logger: logger, Session: session}
 }
 
 // Register create a new user

@@ -28,7 +28,7 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	}
 
 	var svc Service
-	svc = NewStorageService(dbSession)
+	svc = NewStorageService(dbSession, logger)
 	svc = NewLoggingService(log.With(logger, "component", "storage"), svc)
 
 	//POST /api/v1/storage/save/{userid}/{imageid}

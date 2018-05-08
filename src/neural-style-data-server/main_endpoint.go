@@ -46,14 +46,14 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 
 	var prods ProductService.Service
 	prods = ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort,
-		storageSaveURL, storageFindURL, cacheGetURL, *localDev, dbSession)
+		storageSaveURL, storageFindURL, cacheGetURL, *localDev, logger, dbSession)
 
 	prods = ProductService.NewLoggingService(log.With(logger, "component", "product"), prods)
 	r = ProductService.MakeHTTPHandler(ctx, r, prods, options...)
 
 	// User service
 	var users UserService.Service
-	users = UserService.NewUserSVC(*serverURL, *serverPort, dbSession)
+	users = UserService.NewUserSVC(*serverURL, *serverPort, logger, dbSession)
 	users = UserService.NewLoggingService(log.With(logger, "component", "product"), users)
 	r = UserService.MakeHTTPHandler(ctx, r, users, options...)
 

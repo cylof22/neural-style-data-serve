@@ -19,6 +19,7 @@ import (
 	"neural-style-util"
 
 	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/go-kit/kit/log"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -131,10 +132,12 @@ type ProductService struct {
 	CacheGetURL string
 	IsLocalDev  bool
 	CacheClient *memcache.Client
+	Logger      log.Logger
 }
 
 // NewProductSVC create a new product service
-func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string, localDev bool, session *mgo.Session) *ProductService {
+func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string, localDev bool, logger log.Logger,
+	session *mgo.Session) *ProductService {
 	var client *memcache.Client
 	if !localDev {
 		var memcachedURL []string
