@@ -5,6 +5,12 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// Service define the basic interface for store the image to the cloud storage
+type Service interface {
+	Save(userID, imgName string, imgData []byte) error
+	Find(userID, imgName string) (string, error)
+}
+
 // StorageService define the basic storage service
 type StorageService struct {
 	dbSession *mgo.Session

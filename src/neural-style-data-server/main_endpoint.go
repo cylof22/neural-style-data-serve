@@ -44,9 +44,13 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	cacheServiceURL := "http://" + *serverURL + ":" + *serverPort
 	cacheGetURL := cacheServiceURL + *cacheGetRouter
 
-	productService := ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort,
+	var prods ProductService.Service
+
+	prods = ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort,
 		storageSaveURL, storageFindURL, cacheGetURL, *localDev, dbSession)
-	r = ProductService.MakeHTTPHandler(ctx, r, productService, options...)
+
+	prods = ProductService.NewLoggingService(log.With(logger, "component", "product"), prods)
+	r = ProductService.MakeHTTPHandler(ctx, r, prods, options...)
 
 	// User service
 	userService := UserService.NewUserSVC(*serverURL, *serverPort, dbSession)

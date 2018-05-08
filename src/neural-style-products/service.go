@@ -106,6 +106,20 @@ type Artist struct {
 	ModelName   string `json:"modelname"`
 }
 
+// Service define the basic interface for the products service
+type Service interface {
+	// UploadContentFile upload the content data into the service
+	UploadContentFile(productData Product) (Product, error)
+	UploadStyleFile(productData UploadProduct) (Product, error)
+	UploadStyleFiles(products BatchProducts) (string, error)
+	GetProducts(params QueryParams) ([]Product, error)
+	GetProductsByID(id string) (Product, error)
+	GetReviewsByProductID(id string) ([]Review, error)
+	GetArtists() ([]Artist, error)
+	GetHotestArtists() ([]Artist, error)
+	GetImage(userID, imageID string) ([]byte, string, error)
+}
+
 // ProductService for final image style transfer
 type ProductService struct {
 	OutputPath  string

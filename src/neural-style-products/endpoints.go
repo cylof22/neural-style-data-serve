@@ -76,7 +76,7 @@ type NSCacheGetResponse struct {
 }
 
 // MakeNSContentUploadEndpoint upload the content file
-func MakeNSContentUploadEndpoint(svc *ProductService) endpoint.Endpoint {
+func MakeNSContentUploadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSUploadRequest)
 		prod, err := svc.UploadContentFile(req.ProductData)
@@ -85,7 +85,7 @@ func MakeNSContentUploadEndpoint(svc *ProductService) endpoint.Endpoint {
 }
 
 // MakeNSStyleUploadEndpoint upload the style file
-func MakeNSStyleUploadEndpoint(svc *ProductService) endpoint.Endpoint {
+func MakeNSStyleUploadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSStyleUploadRequest)
 		prod, err := svc.UploadStyleFile(req.ProductData)
@@ -94,7 +94,7 @@ func MakeNSStyleUploadEndpoint(svc *ProductService) endpoint.Endpoint {
 }
 
 // MakeNSStylesUploadEndpoint upload the style file
-func MakeNSStylesUploadEndpoint(svc *ProductService) endpoint.Endpoint {
+func MakeNSStylesUploadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSStylesUploadRequest)
 		res, err := svc.UploadStyleFiles(req.ProductsData)
@@ -103,7 +103,7 @@ func MakeNSStylesUploadEndpoint(svc *ProductService) endpoint.Endpoint {
 }
 
 // MakeNSGetProductsEndpoint get all the transfered file
-func MakeNSGetProductsEndpoint(svc *ProductService) endpoint.Endpoint {
+func MakeNSGetProductsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSQueryRequest)
 		output, err := svc.GetProducts(req.QueryData)
@@ -112,7 +112,7 @@ func MakeNSGetProductsEndpoint(svc *ProductService) endpoint.Endpoint {
 }
 
 // MakeNSGetProductByIDEndpoint get the selected product by id
-func MakeNSGetProductByIDEndpoint(svc *ProductService) endpoint.Endpoint {
+func MakeNSGetProductByIDEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSGetProductByIDRequest)
 		prod, err := svc.GetProductsByID(req.ID)
@@ -121,7 +121,7 @@ func MakeNSGetProductByIDEndpoint(svc *ProductService) endpoint.Endpoint {
 }
 
 // MakeNSGetReviewsByIDEndpoint get the selected reviews by id
-func MakeNSGetReviewsByIDEndpoint(svc *ProductService) endpoint.Endpoint {
+func MakeNSGetReviewsByIDEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSGetReviewsByIDRequest)
 		reviews, err := svc.GetReviewsByProductID(req.ID)
@@ -130,7 +130,7 @@ func MakeNSGetReviewsByIDEndpoint(svc *ProductService) endpoint.Endpoint {
 }
 
 // MakeNSGetArtists generate the endpoint for get hotest artists
-func MakeNSGetArtists(svc *ProductService) endpoint.Endpoint {
+func MakeNSGetArtists(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		artists, err := svc.GetArtists()
 		return NSGetArtistsResponse{Artists: artists, Err: err}, err
@@ -138,7 +138,7 @@ func MakeNSGetArtists(svc *ProductService) endpoint.Endpoint {
 }
 
 // MakeNSGetHotestArtists generate the endpoint for getting hotest artists
-func MakeNSGetHotestArtists(svc *ProductService) endpoint.Endpoint {
+func MakeNSGetHotestArtists(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		hotestArtists, err := svc.GetHotestArtists()
 		return NSGetArtistsResponse{Artists: hotestArtists, Err: err}, err
@@ -146,7 +146,7 @@ func MakeNSGetHotestArtists(svc *ProductService) endpoint.Endpoint {
 }
 
 // MakeNSImageCacheGetEndpoint define the endpoint for image cache get
-func MakeNSImageCacheGetEndpoint(svc *ProductService) endpoint.Endpoint {
+func MakeNSImageCacheGetEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSCacheGetRequest)
 		data, mimeType, err := svc.GetImage(req.UserID, req.ImageID)
