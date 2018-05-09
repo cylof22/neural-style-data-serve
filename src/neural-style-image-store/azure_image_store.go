@@ -1,4 +1,4 @@
-package ImageStoreService
+package main
 
 import (
 	"context"
@@ -29,8 +29,8 @@ type AzureImageStore struct {
 }
 
 // NewAzureImageStore create the default azure image storage
-func NewAzureImageStore() AzureImageStore {
-	return AzureImageStore{
+func NewAzureImageStore() *AzureImageStore {
+	return &AzureImageStore{
 		StorageAccount: azStorageAccount,
 		StorageKey:     azStorageKey,
 		StorageURL:     azStorageURL,
@@ -38,7 +38,7 @@ func NewAzureImageStore() AzureImageStore {
 }
 
 // Save image on azure storage
-func (svc AzureImageStore) Save(img Image) (string, error) {
+func (svc *AzureImageStore) Save(img Image) (string, error) {
 	// Create a default request pipeline using your storage account name and account key.
 	credential := azblob.NewSharedKeyCredential(svc.StorageAccount, svc.StorageKey)
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
@@ -53,21 +53,34 @@ func (svc AzureImageStore) Save(img Image) (string, error) {
 
 	// Create the container
 	ctx := context.Background() // This example uses a never-expiring context
+	var blobName string
 	_, err := containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
-	// add the image file as a blob to the container
-	blobName := filepath.Base(img.Location)
-	imgBlobURL := containerURL.NewBlockBlobURL(blobName)
-	file, err := os.Open(img.ParentPath + img.Location)
-	if err != nil {
-		fmt.Println(err.Error())
-		return "", err
+	if len(img.Location) != 0 {
+		// add the image file as a blob to the container
+		blobName := filepath.Base(img.Location)
+		imgBlobURL := containerURL.NewBlockBlobURL(blobName)
+		file, err := os.Open(img.Location)
+		if err != nil {
+			fmt.Println(err.Error())
+			return "", err
+		}
+
+		// The high-level API UploadFileToBlockBlob function uploads blocks in parallel for optimal performance, and
+		// can handle large files as well.
+		// This function calls PutBlock/PutBlockList for files larger 256 MBs, and calls PutBlob for any file smaller
+		_, err = azblob.UploadFileToBlockBlob(ctx, file, imgBlobURL, azblob.UploadToBlockBlobOptions{
+			BlockSize:   4 * 1024 * 1024,
+			Parallelism: 16})
+	} else {
+		blobName = img.ImageName
+		imgBlobURL := containerURL.NewBlockBlobURL(blobName)
+		// The high-level API UploadFileToBlockBlob function uploads blocks in parallel for optimal performance, and
+		// can handle large files as well.
+		// This function calls PutBlock/PutBlockList for files larger 256 MBs, and calls PutBlob for any file smaller
+		_, err = azblob.UploadBufferToBlockBlob(ctx, img.ImageData, imgBlobURL, azblob.UploadToBlockBlobOptions{
+			BlockSize:   4 * 1024 * 1024,
+			Parallelism: 16})
 	}
-	// The high-level API UploadFileToBlockBlob function uploads blocks in parallel for optimal performance, and
-	// can handle large files as well.
-	// This function calls PutBlock/PutBlockList for files larger 256 MBs, and calls PutBlob for any file smaller
-	_, err = azblob.UploadFileToBlockBlob(ctx, file, imgBlobURL, azblob.UploadToBlockBlobOptions{
-		BlockSize:   4 * 1024 * 1024,
-		Parallelism: 16})
 
 	if err != nil {
 		return "", err
@@ -93,15 +106,15 @@ func (svc AzureImageStore) Save(img Image) (string, error) {
 }
 
 // Find the selected image from id
-func (svc AzureImageStore) Find(userID, fileName string) (string, error) {
+func (svc *AzureImageStore) Find(userID, fileName string) (string, error) {
 	credential := azblob.NewSharedKeyCredential(svc.StorageAccount, svc.StorageKey)
 
 	// return the blob url for the end user
 	// Set the desired SAS signature values and sign them with the shared key credentials to get the SAS query parameters.
 	sasQueryParams := azblob.BlobSASSignatureValues{
 		Protocol:      azblob.SASProtocolHTTPS,
-		ExpiryTime:    time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
-		Permissions:   azblob.AccountSASPermissions{Read: true}.String(),
+		ExpiryTime:    time.Now().UTC().Add(5 * time.Minute), // 48-hours before expiration
+		Permissions:   azblob.BlobSASPermissions{Read: true}.String(),
 		ContainerName: userID,
 		BlobName:      fileName,
 	}.NewSASQueryParameters(credential)
@@ -111,14 +124,14 @@ func (svc AzureImageStore) Find(userID, fileName string) (string, error) {
 		return "", errors.New(fileName + "doesn't exist")
 	}
 
-	publicblobURL := "https://%s" + svc.StorageURL + "?%s"
-	publicblobURL = fmt.Sprintf(publicblobURL, svc.StorageAccount, qp)
+	publicblobURL := "https://%s" + svc.StorageURL + "/%s/%s?%s"
+	publicblobURL = fmt.Sprintf(publicblobURL, svc.StorageAccount, userID, fileName, qp)
 
 	return publicblobURL, nil
 }
 
 // FindAllByUser return all the image for a selected user
-func (svc AzureImageStore) FindAllByUser(userID string) ([]string, error) {
+func (svc *AzureImageStore) FindAllByUser(userID string) ([]string, error) {
 	var blobsURL []string
 
 	credential := azblob.NewSharedKeyCredential(svc.StorageAccount, svc.StorageKey)
@@ -146,7 +159,7 @@ func (svc AzureImageStore) FindAllByUser(userID string) ([]string, error) {
 		for _, blobInfo := range listBlob.Blobs.Blob {
 			sasQueryParams := azblob.BlobSASSignatureValues{
 				Protocol:      azblob.SASProtocolHTTPS,
-				ExpiryTime:    time.Now().UTC().Add(48 * time.Hour), // 48-hours before expiration
+				ExpiryTime:    time.Now().UTC().Add(5 * time.Minute), // 48-hours before expiration
 				Permissions:   azblob.AccountSASPermissions{Read: true}.String(),
 				ContainerName: userID,
 				BlobName:      blobInfo.Name,

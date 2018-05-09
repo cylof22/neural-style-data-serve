@@ -1,4 +1,4 @@
-package ImageStoreService
+package main
 
 // ImageStore define the basic interface for a ImageStore
 type ImageStore interface {
