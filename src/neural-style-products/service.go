@@ -194,6 +194,7 @@ func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string
 		defer outputFile.Close()
 		_, err = watermarkSVC.CreateWaterMark(outputFile)
 		if err != nil {
+			level.Debug(svc.Logger).Log("API", "CreateWaterMark", "info", err.Error())
 			fmt.Println(err.Error())
 			return "", err
 		}
@@ -257,14 +258,12 @@ func (svc *ProductService) UploadContentFile(productData Product) (Product, erro
 func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, error) {
 	imageID := NSUtil.UniqueID()
 	newImageURL, err := svc.uploadPicture(productData.Owner, productData.PicData, imageID, "styles")
-
-	// The product's URL is a cached local image url, it will be updated by listening the ImageStoreService
-	// UploadResult Channel asychonously
-	newProduct := Product{ID: imageID}
 	if err != nil {
-		fmt.Println(err)
-		return newProduct, err
+		level.Error(svc.Logger).Log("API", "UploadStyleFile", "info", err.Error(), "owner", productData.Owner)
+		return Product{}, err
 	}
+
+	newProduct := Product{ID: imageID}
 
 	newProduct.Owner = productData.Owner
 	newProduct.Maker = productData.Maker
@@ -277,8 +276,8 @@ func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, 
 
 	newProduct.Story.Pictures = productData.Story.Pictures
 	for index, pic := range productData.Story.Pictures {
-		picId := NSUtil.UniqueID()
-		picURL, err := svc.uploadPicture(productData.Owner, pic, picId, "styles")
+		picID := NSUtil.UniqueID()
+		picURL, err := svc.uploadPicture(productData.Owner, pic, picID, "styles")
 		if err == nil {
 			newProduct.Story.Pictures[index] = picURL
 		} else {
@@ -361,7 +360,7 @@ func (svc *ProductService) GetProducts(params QueryParams) ([]Product, error) {
 	query := getQueryBSon(params)
 	err := c.Find(query).All(&products)
 	if err != nil {
-		level.Debug(svc.Logger).Log("API", "GetProducts", "info", err.Error(), "categories", params.Categories, "owners", params.Owner)
+		level.Debug(svc.Logger).Log("API", "GetProducts", "info", err.Error())
 		return products, errors.New("Database error")
 	}
 

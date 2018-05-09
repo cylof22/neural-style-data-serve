@@ -2,12 +2,21 @@ package UserService
 
 import (
 	"errors"
-	"fmt"
 	"neural-style-util"
+	"os"
+	"time"
+
+	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/go-kit/kit/log/level"
 
 	"github.com/go-kit/kit/log"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+)
+
+var (
+	// SecretKey define the private key for generate the JWT token
+	SecretKey = os.Getenv("TOKEN_KEY")
 )
 
 // UserInfo define the basic user information
@@ -68,9 +77,25 @@ func (svc *UserService) Register(userData UserInfo) (string, error) {
 		return result, errors.New("Failed to add a new user")
 	}
 
-	fmt.Println("Register data is")
-	fmt.Println(userData)
+	level.Debug(svc.Logger).Log("API", "Register", "info", userData)
 	return result, err
+}
+
+// CreateToken create time-limited token
+func CreateToken(userName string, log log.Logger) string {
+	claims := make(jwt.MapClaims)
+	claims["username"] = userName
+	claims["exp"] = time.Now().Add(time.Hour * 72).Unix() //72小时有效期，过期需要重新登录获取token
+	claims["iat"] = time.Now().Unix()
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(SecretKey))
+	if err != nil {
+		level.Error(log).Log("API", "CeateToken", "info", "Failed to sign with token", "err", err.Error())
+		return ""
+	}
+
+	return tokenString
 }
 
 // Login login the style transfer platform
@@ -93,6 +118,6 @@ func (svc *UserService) Login(loginData UserInfo) (UserToken, error) {
 	var userToken UserToken
 	userToken.Name = user.Name
 	userToken.ID = user.ID
-	userToken.Token = NSUtil.CreateToken(loginData.Name)
+	userToken.Token = CreateToken(loginData.Name, svc.Logger)
 	return userToken, err
 }
