@@ -160,7 +160,7 @@ func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string,
 
 	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session,
 		SaveURL: saveURL, FindURL: findURL, CacheGetURL: cacheGetURL, IsLocalDev: localDev,
-		CacheClient: client}
+		Logger: logger, CacheClient: client}
 }
 
 // upload picture file
@@ -179,25 +179,9 @@ func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string
 	if svc.IsLocalDev {
 		outfilePath := path.Join("./data", picFolder, outfileName)
 
-		imgReader := bytes.NewReader(baseData)
-		// The default image type after image.Decode is jpeg
-		img, _, err := image.Decode(imgReader)
-
-		watermarkSVC := WaterMark.Service{
-			SourceImg: img,
-			Text:      "El-force",
-			TextColor: color.RGBA{255, 255, 255, 255},
-			Scale:     1.0,
-		}
-
 		outputFile, _ := os.Create(outfilePath)
 		defer outputFile.Close()
-		_, err = watermarkSVC.CreateWaterMark(outputFile)
-		if err != nil {
-			level.Debug(svc.Logger).Log("API", "CreateWaterMark", "info", err.Error())
-			fmt.Println(err.Error())
-			return "", err
-		}
+		outputFile.Write(baseData)
 
 		newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
 		level.Debug(svc.Logger).Log("Picture URL", newImageURL)
