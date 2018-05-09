@@ -273,20 +273,20 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		))
 
 	// GET api/products/{id}/delete
-	r.Methods("GET").Path("/api/products/{id}/delete").Handler(NSUtil.AuthMiddleware(httptransport.NewServer(
-		MakeNSDeleteProductEndpoint(svc),
+	r.Methods("GET").Path("/api/products/{id}/delete").Handler(httptransport.NewServer(
+		auth(MakeNSDeleteProductEndpoint(svc)),
 		decodeNSDeleteProductRequest,
 		encodeNSDeleteProductResponse,
 		options...,
-	)))
+	))
 
 	// POST api/products/{id}/update
-	r.Methods("POST").Path("/api/products/{id}/update").Handler(NSUtil.AuthMiddleware(httptransport.NewServer(
-		MakeNSUpdateProductEndpoint(svc),
+	r.Methods("POST").Path("/api/products/{id}/update").Handler(httptransport.NewServer(
+		auth(MakeNSUpdateProductEndpoint(svc)),
 		decodeNSUpdateProductRequest,
 		encodeNSUpdateProductResponse,
 		options...,
-	)))
+	))
 
 	// Todo: Web Service maybe need a seperate server
 	// output file server

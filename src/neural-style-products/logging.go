@@ -93,3 +93,17 @@ func (svc *loggingService) GetImage(userID, imageID string) (data []byte, info s
 
 	return svc.dataService.GetImage(userID, imageID)
 }
+
+func (svc *loggingService) DeleteProduct(productID string) (err error) {
+	defer func(begin time.Time) {
+		svc.logger.Log("method", "DeleteProduct", "productID", productID, "took", time.Since(begin), "err", err)
+	}(time.Now())
+	return svc.dataService.DeleteProduct(productID)
+}
+func (svc *loggingService) UpdateProduct(productID string, productData UploadProduct) (err error) {
+	defer func(begin time.Time) {
+		svc.logger.Log("method", "UpdateProduct", "productID", productID, time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.dataService.UpdateProduct(productID, productData)
+}

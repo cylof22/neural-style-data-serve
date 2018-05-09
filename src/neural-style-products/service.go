@@ -121,6 +121,8 @@ type Service interface {
 	GetArtists() ([]Artist, error)
 	GetHotestArtists() ([]Artist, error)
 	GetImage(userID, imageID string) ([]byte, string, error)
+	DeleteProduct(productID string) error
+	UpdateProduct(productID string, productData UploadProduct) error
 }
 
 // ProductService for final image style transfer

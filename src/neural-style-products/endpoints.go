@@ -84,7 +84,7 @@ type NSDeleteProductResponse struct {
 }
 
 type NSUpdateProductRequest struct {
-	ID string
+	ID          string
 	ProductData UploadProduct
 }
 
@@ -172,7 +172,7 @@ func MakeNSImageCacheGetEndpoint(svc Service) endpoint.Endpoint {
 }
 
 // MakeNSDeleteProductEndpoint deletes one product
-func MakeNSDeleteProductEndpoint(svc *ProductService) endpoint.Endpoint {
+func MakeNSDeleteProductEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSDeleteProductRequest)
 		err := svc.DeleteProduct(req.ID)
@@ -181,7 +181,7 @@ func MakeNSDeleteProductEndpoint(svc *ProductService) endpoint.Endpoint {
 }
 
 // MakeNSUpdateProductEndpoint updates one product
-func MakeNSUpdateProductEndpoint(svc *ProductService) endpoint.Endpoint {
+func MakeNSUpdateProductEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSUpdateProductRequest)
 		err := svc.UpdateProduct(req.ID, req.ProductData)
