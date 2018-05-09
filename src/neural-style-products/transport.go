@@ -158,6 +158,41 @@ func encodeNSCachedGetResponse(ctx context.Context, w http.ResponseWriter, respo
 	return err
 }
 
+func decodeNSDeleteProductRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	return NSDeleteProductRequest{ID: id}, nil
+}
+
+func encodeNSDeleteProductResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	deleteError := response.(NSDeleteProductResponse)
+	if deleteError.Err != nil {
+		return deleteError.Err
+	}
+
+	return nil
+}
+
+func decodeNSUpdateProductRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	productData := UploadProduct{}
+	json.NewDecoder(r.Body).Decode(&productData)
+
+	return NSUpdateProductRequest{ID: id, ProductData: productData}, nil
+}
+
+func encodeNSUpdateProductResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	updateError := response.(NSUpdateProductResponse)
+	if updateError.Err != nil {
+		return updateError.Err
+	}
+
+	return nil
+}
+
 // MakeHTTPHandler generate the http handler for the style service handler
 func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc *ProductService, options ...httptransport.ServerOption) *mux.Router {
 	// POST /api/upload/content
@@ -234,6 +269,22 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc *ProductService, op
 			encodeNSCachedGetResponse,
 			options...,
 		))
+
+	// GET api/products/{id}/delete
+	r.Methods("GET").Path("/api/products/{id}/delete").Handler(NSUtil.AuthMiddleware(httptransport.NewServer(
+		MakeNSDeleteProductEndpoint(svc),
+		decodeNSDeleteProductRequest,
+		encodeNSDeleteProductResponse,
+		options...,
+	)))
+
+	// POST api/products/{id}/update
+	r.Methods("POST").Path("/api/products/{id}/update").Handler(NSUtil.AuthMiddleware(httptransport.NewServer(
+		MakeNSUpdateProductEndpoint(svc),
+		decodeNSUpdateProductRequest,
+		encodeNSUpdateProductResponse,
+		options...,
+	)))
 
 	// Todo: Web Service maybe need a seperate server
 	// output file server

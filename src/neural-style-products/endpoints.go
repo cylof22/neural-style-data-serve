@@ -75,6 +75,23 @@ type NSCacheGetResponse struct {
 	Error error
 }
 
+type NSDeleteProductRequest struct {
+	ID string
+}
+
+type NSDeleteProductResponse struct {
+	Err error
+}
+
+type NSUpdateProductRequest struct {
+	ID string
+	ProductData UploadProduct
+}
+
+type NSUpdateProductResponse struct {
+	Err error
+}
+
 // MakeNSContentUploadEndpoint upload the content file
 func MakeNSContentUploadEndpoint(svc *ProductService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -151,5 +168,23 @@ func MakeNSImageCacheGetEndpoint(svc *ProductService) endpoint.Endpoint {
 		req := request.(NSCacheGetRequest)
 		data, mimeType, err := svc.GetImage(req.UserID, req.ImageID)
 		return NSCacheGetResponse{Data: data, Type: mimeType, Error: err}, err
+	}
+}
+
+// MakeNSDeleteProductEndpoint deletes one product
+func MakeNSDeleteProductEndpoint(svc *ProductService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSDeleteProductRequest)
+		err := svc.DeleteProduct(req.ID)
+		return NSDeleteProductResponse{Err: err}, err
+	}
+}
+
+// MakeNSUpdateProductEndpoint updates one product
+func MakeNSUpdateProductEndpoint(svc *ProductService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSUpdateProductRequest)
+		err := svc.UpdateProduct(req.ID, req.ProductData)
+		return NSUpdateProductResponse{Err: err}, err
 	}
 }
