@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"neural-style-util"
 
 	"neural-style-products"
 
@@ -29,12 +30,14 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorLogger(logger),
 		httptransport.ServerErrorEncoder(encodeError),
+		httptransport.ServerBefore(NSUtil.ParseToken),
 	}
 
+	authMiddleware := NSUtil.AuthMiddleware(logger)
 	// Style Service
 	styleTransferService := StyleService.NewNeuralTransferSVC(*networkPath, *previewNetworkPath,
 		*outputPath, *serverURL, *serverPort)
-	r = StyleService.MakeHTTPHandler(ctx, r, styleTransferService, options...)
+	r = StyleService.MakeHTTPHandler(ctx, r, authMiddleware, styleTransferService, options...)
 
 	// Product service
 	storageServiceURL := "http://" + *storageServerURL + ":" + *storageServerPort
@@ -44,13 +47,18 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	cacheServiceURL := "http://" + *serverURL + ":" + *serverPort
 	cacheGetURL := cacheServiceURL + *cacheGetRouter
 
-	productService := ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort,
-		storageSaveURL, storageFindURL, cacheGetURL, *localDev, dbSession)
-	r = ProductService.MakeHTTPHandler(ctx, r, productService, options...)
+	var prods ProductService.Service
+	prods = ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort,
+		storageSaveURL, storageFindURL, cacheGetURL, *localDev, logger, dbSession)
+
+	prods = ProductService.NewLoggingService(log.With(logger, "component", "product"), prods)
+	r = ProductService.MakeHTTPHandler(ctx, r, authMiddleware, prods, options...)
 
 	// User service
-	userService := UserService.NewUserSVC(*serverURL, *serverPort, dbSession)
-	r = UserService.MakeHTTPHandler(ctx, r, userService, options...)
+	var users UserService.Service
+	users = UserService.NewUserSVC(*serverURL, *serverPort, logger, dbSession)
+	users = UserService.NewLoggingService(log.With(logger, "component", "product"), users)
+	r = UserService.MakeHTTPHandler(ctx, r, users, options...)
 
 	return r
 }

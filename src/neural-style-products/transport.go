@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/go-kit/kit/endpoint"
+
 	"neural-style-util"
 
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -194,57 +196,57 @@ func encodeNSUpdateProductResponse(ctx context.Context, w http.ResponseWriter, r
 }
 
 // MakeHTTPHandler generate the http handler for the style service handler
-func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc *ProductService, options ...httptransport.ServerOption) *mux.Router {
+func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middleware, svc Service, options ...httptransport.ServerOption) *mux.Router {
 	// POST /api/upload/content
 	contentUploadHandler := httptransport.NewServer(
-		MakeNSContentUploadEndpoint(svc),
+		auth(MakeNSContentUploadEndpoint(svc)),
 		decodeNSUploadContentRequest,
 		encodeNSUploadContentResponse,
 		options...,
 	)
-	r.Methods("POST").Path("/api/upload/content").Handler(NSUtil.AuthMiddleware(NSUtil.AccessControl(contentUploadHandler)))
+	r.Methods("POST").Path("/api/upload/content").Handler(NSUtil.AccessControl(contentUploadHandler))
 
 	// POST /api/upload/style
 	styleUploadHandler := httptransport.NewServer(
-		MakeNSStyleUploadEndpoint(svc),
+		auth(MakeNSStyleUploadEndpoint(svc)),
 		decodeNSUploadStyleRequest,
 		encodeNSUploadStyleResponse,
 		options...,
 	)
-	r.Methods("POST").Path("/api/upload/style").Handler(NSUtil.AuthMiddleware(NSUtil.AccessControl(styleUploadHandler)))
+	r.Methods("POST").Path("/api/upload/style").Handler(NSUtil.AccessControl(styleUploadHandler))
 
 	// POST /api/upload/styles
 	stylesUploadHandler := httptransport.NewServer(
-		MakeNSStylesUploadEndpoint(svc),
+		auth(MakeNSStylesUploadEndpoint(svc)),
 		decodeNSUploadStylesRequest,
 		encodeNSUploadStylesResponse,
 		options...,
 	)
-	r.Methods("POST").Path("/api/upload/styles").Handler(NSUtil.AuthMiddleware(NSUtil.AccessControl(stylesUploadHandler)))
+	r.Methods("POST").Path("/api/upload/styles").Handler(NSUtil.AccessControl(stylesUploadHandler))
 
 	// GET /api/artists
-	r.Methods("GET").Path("/api/artists").Handler(NSUtil.AuthMiddleware(NSUtil.AccessControl(httptransport.NewServer(
-		MakeNSGetArtists(svc),
+	r.Methods("GET").Path("/api/artists").Handler(NSUtil.AccessControl(httptransport.NewServer(
+		auth(MakeNSGetArtists(svc)),
 		decodeNSGetArtistRequest,
 		encodeNSGetArtistsResponse,
 		options...,
-	))))
+	)))
 
 	// GET /api/artists/hotest
-	r.Methods("GET").Path("/api/artists/hotest").Handler(NSUtil.AuthMiddleware(NSUtil.AccessControl(httptransport.NewServer(
-		MakeNSGetHotestArtists(svc),
+	r.Methods("GET").Path("/api/artists/hotest").Handler(NSUtil.AccessControl(httptransport.NewServer(
+		auth(MakeNSGetHotestArtists(svc)),
 		decodeNSGetArtistRequest,
 		encodeNSGetArtistsResponse,
 		options...,
-	))))
+	)))
 
 	// GET api/products
-	r.Methods("GET").Path("/api/products").Handler(NSUtil.UsernameMiddleware(httptransport.NewServer(
+	r.Methods("GET").Path("/api/products").Handler(httptransport.NewServer(
 		MakeNSGetProductsEndpoint(svc),
 		decodeNSGetProductsRequest,
 		encodeNSGetProductsResponse,
 		options...,
-	)))
+	))
 
 	// GET api/products/{id}
 	r.Methods("GET").Path("/api/products/{id}").Handler(httptransport.NewServer(
@@ -255,12 +257,12 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc *ProductService, op
 	))
 
 	// GET api/products/{id}/reviews
-	r.Methods("GET").Path("/api/products/{id}/reviews").Handler(NSUtil.AuthMiddleware(httptransport.NewServer(
-		MakeNSGetReviewsByIDEndpoint(svc),
+	r.Methods("GET").Path("/api/products/{id}/reviews").Handler(httptransport.NewServer(
+		auth(MakeNSGetReviewsByIDEndpoint(svc)),
 		decodeNSGetReviewsByIDRequest,
 		encodeNSGetReviewsByIDResponse,
 		options...,
-	)))
+	))
 
 	r.Methods("GET").Path("/api/v1/cache/get/{usrid}/{imgid}").Handler(
 		httptransport.NewServer(
@@ -271,20 +273,20 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc *ProductService, op
 		))
 
 	// GET api/products/{id}/delete
-	r.Methods("GET").Path("/api/products/{id}/delete").Handler(NSUtil.AuthMiddleware(httptransport.NewServer(
-		MakeNSDeleteProductEndpoint(svc),
+	r.Methods("GET").Path("/api/products/{id}/delete").Handler(httptransport.NewServer(
+		auth(MakeNSDeleteProductEndpoint(svc)),
 		decodeNSDeleteProductRequest,
 		encodeNSDeleteProductResponse,
 		options...,
-	)))
+	))
 
 	// POST api/products/{id}/update
-	r.Methods("POST").Path("/api/products/{id}/update").Handler(NSUtil.AuthMiddleware(httptransport.NewServer(
-		MakeNSUpdateProductEndpoint(svc),
+	r.Methods("POST").Path("/api/products/{id}/update").Handler(httptransport.NewServer(
+		auth(MakeNSUpdateProductEndpoint(svc)),
 		decodeNSUpdateProductRequest,
 		encodeNSUpdateProductResponse,
 		options...,
-	)))
+	))
 
 	// Todo: Web Service maybe need a seperate server
 	// output file server
