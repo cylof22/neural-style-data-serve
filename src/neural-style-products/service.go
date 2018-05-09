@@ -181,6 +181,7 @@ func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string
 
 		outputFile, _ := os.Create(outfilePath)
 		defer outputFile.Close()
+
 		outputFile.Write(baseData)
 
 		newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
@@ -315,6 +316,71 @@ func (svc *ProductService) addProduct(product Product) error {
 			return errors.New("Book with this ISBN already exists")
 		}
 		return errors.New("Failed to add a new products")
+	}
+
+	return nil
+}
+
+func (svc *ProductService) DeleteProduct(productId string) error {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("products")
+	err := c.Remove(bson.M{"id": productId})
+	if err != nil {
+		return errors.New("Failed to delete product")
+	}
+
+	return nil
+}
+
+func (svc *ProductService) UpdateProduct(productId string, productData UploadProduct) error {
+	updateProduct := Product{ID: productId}
+	updateProduct.Owner = productData.Owner
+	updateProduct.Maker = productData.Maker
+	updateProduct.URL = productData.PicData
+	updateProduct.Price = productData.Price
+	updateProduct.Tags = productData.Tags
+	updateProduct.StyleImgURL = productData.StyleImgURL
+	updateProduct.Story.Description = productData.Story.Description
+	updateProduct.Type = productData.Type
+
+	updateProduct.Story.Pictures = productData.Story.Pictures
+	for index, pic := range productData.Story.Pictures {
+		pos := strings.Index(pic, "http")
+		if pos == 0 {
+			updateProduct.Story.Pictures[index] = pic
+		} else {
+			picID := NSUtil.UniqueID()
+			picURL, err := svc.uploadPicture(productData.Owner, pic, picID, "styles")
+			if err == nil {
+				updateProduct.Story.Pictures[index] = picURL
+			} else {
+				updateProduct.Story.Pictures[index] = ""
+			}
+		}
+	}
+
+	updateData, err := bson.Marshal(&updateProduct)
+	if err != nil {
+		return errors.New("Failed to update product")
+	}
+	mData := bson.M{}
+	err = bson.Unmarshal(updateData, mData)
+	if err != nil {
+		return errors.New("Failed to update product")
+	}
+
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("products")
+	err = c.Update(bson.M{"id": productId}, bson.M{"$set": mData})
+	if err != nil {
+		fmt.Println(err)
+		return errors.New("Failed to update product")
+	} else {
+		fmt.Println("succeed to update product")
 	}
 
 	return nil
