@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"sync"
 
-	"neural-style-util"
+	"github.com/go-kit/kit/endpoint"
 
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
@@ -39,22 +39,22 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // MakeHTTPHandler generate the http handler for the style service handler
-func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc *NeuralTransferService, options ...httptransport.ServerOption) *mux.Router {
+func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middleware, svc *NeuralTransferService, options ...httptransport.ServerOption) *mux.Router {
 	//GET /styleTransfer/{content}/{style}/{iterations}
-	r.Methods("GET").Path("/styleTransfer").Queries("content", "{content}", "style", "{style}", "iterations", "{iterations:[0-9]+}").Handler(NSUtil.AuthMiddleware(httptransport.NewServer(
-		MakeNSEndpoint(svc),
+	r.Methods("GET").Path("/styleTransfer").Queries("content", "{content}", "style", "{style}", "iterations", "{iterations:[0-9]+}").Handler(httptransport.NewServer(
+		auth(MakeNSEndpoint(svc)),
 		decodeNSRequest,
 		encodeNSResponse,
 		options...,
-	)))
+	))
 
 	//GET /styleTransferPreview/{content}/{style}
-	r.Methods("GET").Path("/styleTransferPreview").Queries("content", "{content}", "style", "{style}").Handler(NSUtil.AuthMiddleware(httptransport.NewServer(
-		MakeNSPreviewEndpoint(svc),
+	r.Methods("GET").Path("/styleTransferPreview").Queries("content", "{content}", "style", "{style}").Handler(httptransport.NewServer(
+		auth(MakeNSPreviewEndpoint(svc)),
 		decodeNSPreviewRequest,
 		encodeNSResponse,
 		options...,
-	)))
+	))
 
 	return r
 }

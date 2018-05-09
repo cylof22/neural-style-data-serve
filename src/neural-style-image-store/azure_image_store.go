@@ -61,7 +61,6 @@ func (svc *AzureImageStore) Save(img Image) (string, error) {
 		imgBlobURL := containerURL.NewBlockBlobURL(blobName)
 		file, err := os.Open(img.Location)
 		if err != nil {
-			fmt.Println(err.Error())
 			return "", err
 		}
 

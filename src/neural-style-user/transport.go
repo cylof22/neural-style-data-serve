@@ -45,7 +45,7 @@ func encodeNSLoginResponse(ctx context.Context, w http.ResponseWriter, response 
 }
 
 // MakeHTTPHandler generate the http handler for the style service handler
-func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc *UserService, options ...httptransport.ServerOption) *mux.Router {
+func MakeHTTPHandler(ctx context.Context, r *mux.Router, svc Service, options ...httptransport.ServerOption) *mux.Router {
 	// Register
 	registerHandler := httptransport.NewServer(
 		MakeNSRegisterEndpoint(svc),

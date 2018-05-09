@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	mgo "gopkg.in/mgo.v2"
 )
 
@@ -38,15 +39,15 @@ func main() {
 	var logger log.Logger
 	{
 		logger = log.NewLogfmtLogger(os.Stderr)
+		level.NewFilter(logger, level.AllowInfo())
 		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
-		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
 	r := makeHTTPHandler(ctx, session, logger)
 
 	// HTTP transport
 	go func() {
-		fmt.Println("Starting server at port " + *serverPort)
+		level.Debug(logger).Log("info", "Starting server at "+*serverURL+":"+*serverPort)
 		handler := r
 		errChan <- http.ListenAndServe(*serverURL+":"+*serverPort, handler)
 	}()
@@ -56,5 +57,6 @@ func main() {
 		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 		errChan <- fmt.Errorf("%s", <-c)
 	}()
-	fmt.Println(<-errChan)
+	errinfo := <-errChan
+	level.Debug(logger).Log("info", "crash info: "+errinfo.Error())
 }

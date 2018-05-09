@@ -27,7 +27,9 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 		httptransport.ServerErrorEncoder(encodeError),
 	}
 
-	svc := NewStorageService(dbSession)
+	var svc Service
+	svc = NewStorageService(dbSession, logger)
+	svc = NewLoggingService(log.With(logger, "component", "storage"), svc)
 
 	//POST /api/v1/storage/save/{userid}/{imageid}
 	r.Methods("POST").Path("/api/v1/storage/save").Queries("userid", "{userid}", "imageid", "{imageid}").Handler(
@@ -63,7 +65,7 @@ type NSSaveResponse struct {
 }
 
 // MakeNSStoreEndpoint upload the content file
-func MakeNSStoreEndpoint(svc *StorageService) endpoint.Endpoint {
+func MakeNSStoreEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSSaveRequest)
 		err := svc.Save(req.UserID, req.ImageID, req.ImageData)
@@ -84,7 +86,7 @@ type NSFindResponse struct {
 }
 
 // MakeNSFindEndpoint find the public access url for a given user id and image name
-func MakeNSFindEndpoint(svc *StorageService) endpoint.Endpoint {
+func MakeNSFindEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSFindRequest)
 		url, err := svc.Find(req.UserID, req.ImageID)

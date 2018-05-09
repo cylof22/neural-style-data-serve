@@ -1,25 +1,52 @@
 package NSUtil
 
 import (
-	"fmt"
+	"context"
+	"errors"
 	"net/http"
+	"os"
 	"strings"
-	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 )
 
 // SecretKey used encode
-const (
-	SecretKey = "Tulian is great"
+var (
+	SecretKey = os.Getenv("TOKEN_KEY")
+
+	AuthToken = "Token"
+
+	// ErrTokenContextMissing denotes a token was not passed into the parsing
+	// middleware's context.
+	ErrTokenContextMissing = errors.New("token up for parsing was not passed through the context")
+
+	// ErrTokenInvalid denotes a token was not able to be validated.
+	ErrTokenInvalid = errors.New("JWT Token was invalid")
+
+	// ErrTokenExpired denotes a token's expire header (exp) has since passed.
+	ErrTokenExpired = errors.New("JWT Token is expired")
+
+	// ErrTokenMalformed denotes a token was not formatted as a JWT token.
+	ErrTokenMalformed = errors.New("JWT Token is malformed")
+
+	// ErrTokenNotActive denotes a token's not before header (nbf) is in the
+	// future.
+	ErrTokenNotActive = errors.New("token is not valid yet")
+
+	// ErrUnexpectedSigningMethod denotes a token was signed with an unexpected
+	// signing method.
+	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
 )
 
 // CheckToken validate the token
-func CheckToken(authString string) (bool, string) {
+func CheckToken(authString string, log log.Logger) (string, error) {
 	authList := strings.Split(authString, " ")
 	if len(authList) != 2 || authList[0] != "Bearer" {
-		fmt.Println("No authorization info")
-		return false, ""
+		level.Error(log).Log("API", "CheckToken", "info", "No authorization info")
+		return "", errors.New("Unkown authorization info")
 	}
 
 	tokenString := authList[1]
@@ -27,77 +54,84 @@ func CheckToken(authString string) (bool, string) {
 		return []byte(SecretKey), nil
 	})
 	if err != nil {
-		fmt.Println("parse claims failed: ", err)
-		return false, ""
+		level.Error(log).Log("API", "CheckToken", "info", "Token parse error", "err", err.Error())
+		return "", errors.New("Bad Token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		fmt.Println("Can't access claims")
-		return false, ""
+		level.Error(log).Log("API", "CheckToken", "info", "Can't access claims", "err", err.Error())
+		return "", errors.New("No access claims")
 	}
 	user := claims["username"].(string)
 
-	return true, user
+	return user, nil
 }
 
 // GetUsername get parse user name
-func GetUsername(req *http.Request) string {
-	var authString = ""
-	if len(req.Header) > 0 {
-		for k, v := range req.Header {
-			if k == "Authorization" {
-				authString = v[0]
-			}
-		}
-	}
-
-	if authString == "" {
-		return ""
-	}
-
-	_, username := CheckToken(authString)
-	return username
+func GetUsername(authString string, log log.Logger) error {
+	_, err := CheckToken(authString, log)
+	return err
 }
 
 // UsernameMiddleware support user name parsing
-func UsernameMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		GetUsername(r)
-		next.ServeHTTP(w, r)
-	})
+func UsernameMiddleware(log log.Logger) endpoint.Middleware {
+	return func(next endpoint.Endpoint) endpoint.Endpoint {
+		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+			tokenString, ok := ctx.Value(AuthToken).(string)
+			if !ok || len(tokenString) == 0 {
+				return nil, NewErrorWithStatus(http.StatusNonAuthoritativeInfo, "Missing Authorization token")
+			}
+
+			err = GetUsername(tokenString, log)
+			if err != nil {
+				return nil, err
+			}
+
+			return next(ctx, request)
+		}
+	}
+}
+
+// ParseToken parse the jwt token and store it in context
+func ParseToken(ctx context.Context, req *http.Request) context.Context {
+	authString := req.Header.Get("Authorization")
+	return context.WithValue(ctx, AuthToken, authString)
 }
 
 // AuthMiddleware support authorization
-func AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		username := GetUsername(r)
-		if username == "" {
-			//w.Header().Set("Content-Type", "text/html; text/javascript; text/css; charset=utf-8")
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized"))
-		} else {
-			next.ServeHTTP(w, r)
+func AuthMiddleware(log log.Logger) endpoint.Middleware {
+	return func(next endpoint.Endpoint) endpoint.Endpoint {
+		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+			tokenString, ok := ctx.Value(AuthToken).(string)
+			if !ok || len(tokenString) == 0 {
+				return nil, NewErrorWithStatus(http.StatusNonAuthoritativeInfo, "Missing Authorization token")
+			}
+
+			err = GetUsername(tokenString, log)
+			if err != nil {
+				if e, ok := err.(*jwt.ValidationError); ok {
+					switch {
+					case e.Errors&jwt.ValidationErrorMalformed != 0:
+						err = ErrTokenMalformed
+					case e.Errors&jwt.ValidationErrorExpired != 0:
+						// Token is expired
+						err = ErrTokenMalformed
+					case e.Errors&jwt.ValidationErrorNotValidYet != 0:
+						// Token is not active yet
+						err = ErrTokenNotActive
+					case e.Inner != nil:
+						// report e.Inner
+						err = e.Inner
+					}
+				}
+
+				return nil, NewErrorWithStatus(http.StatusUnauthorized, err.Error())
+			}
+
+			return next(ctx, request)
 		}
-	})
-}
-
-// CreateToken create time-limited token
-func CreateToken(userName string) string {
-	claims := make(jwt.MapClaims)
-	claims["username"] = userName
-	claims["exp"] = time.Now().Add(time.Hour * 72).Unix() //72小时有效期，过期需要重新登录获取token
-	claims["iat"] = time.Now().Unix()
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(SecretKey))
-	if err != nil {
-		fmt.Println("Error for sign token: ")
-		fmt.Println(err)
-		return ""
 	}
-
-	return tokenString
 }
 
 // AccessControl control the CORS
