@@ -23,7 +23,7 @@ var (
 	storageServerPort       = flag.String("storagePort", "5000", "Storage Server Port")
 	storageServerSaveRouter = flag.String("saveRouter", "/api/v1/storage/save", "URL router for save")
 	storageServerFindRouter = flag.String("findRouter", "/api/v1/storage/find", "URL router for find")
-	cacheServerPort         = flag.String("cachePort", "80", "memcached cached port")
+	cacheServer             = flag.String("cacheHost", "www.elforce.net", "memcached host")
 	cacheGetRouter          = flag.String("cacheGetURL", "/api/v1/cache/get", "Cache Get Router")
 	localDev                = flag.Bool("local", false, "Disable Cloud Storage and local Memcached")
 	networkPath             = flag.String("network", "", "neural network model path")
