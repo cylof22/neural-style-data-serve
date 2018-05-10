@@ -44,7 +44,7 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	storageSaveURL := storageServiceURL + *storageServerSaveRouter
 	storageFindURL := storageServiceURL + *storageServerFindRouter
 
-	cacheServiceURL := "http://" + *serverURL + ":" + *serverPort
+	cacheServiceURL := "http://" + *serverURL + ":" + *cacheServerPort
 	cacheGetURL := cacheServiceURL + *cacheGetRouter
 
 	var prods ProductService.Service
