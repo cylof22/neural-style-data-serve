@@ -2,6 +2,7 @@ package UserService
 
 import (
 	"errors"
+	"fmt"
 	"neural-style-util"
 	"os"
 	"time"
@@ -61,6 +62,7 @@ func (svc *UserService) Register(userData UserInfo) (string, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
+	fmt.Println("Start Login")
 	// if the user name exists
 	var currentUser UserInfo
 	c := session.DB("store").C("users")
@@ -77,6 +79,7 @@ func (svc *UserService) Register(userData UserInfo) (string, error) {
 		return result, errors.New("Failed to add a new user")
 	}
 
+	fmt.Println("End login")
 	level.Debug(svc.Logger).Log("API", "Register", "info", userData)
 	return result, err
 }
