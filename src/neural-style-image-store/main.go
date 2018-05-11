@@ -15,9 +15,9 @@ import (
 )
 
 var (
-	serverURL    = flag.String("host", "localhost", "neural style server url")
+	serverURL    = flag.String("host", "0.0.0.0", "neural style server url")
 	serverPort   = flag.String("port", "5000", "neural style server port")
-	dbServerURL  = flag.String("dbserver", "localhost", "style products server url")
+	dbServerURL  = flag.String("dbserver", "0.0.0.0", "style products server url")
 	dbServerPort = flag.String("dbport", "9000", "style products port url")
 )
 

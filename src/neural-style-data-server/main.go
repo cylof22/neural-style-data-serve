@@ -15,11 +15,11 @@ import (
 )
 
 var (
-	serverURL               = flag.String("host", "localhost", "neural style server url")
+	serverURL               = flag.String("host", "0.0.0.0", "neural style server url")
 	serverPort              = flag.String("port", "8000", "neural style server port")
-	dbServerURL             = flag.String("dbserver", "localhost", "style products server url")
+	dbServerURL             = flag.String("dbserver", "0.0.0.0", "style products server url")
 	dbServerPort            = flag.String("dbport", "9000", "style products port url")
-	storageServerURL        = flag.String("storageURL", "localhost", "Storage Server URL")
+	storageServerURL        = flag.String("storageURL", "0.0.0.0", "Storage Server URL")
 	storageServerPort       = flag.String("storagePort", "5000", "Storage Server Port")
 	storageServerSaveRouter = flag.String("saveRouter", "/api/v1/storage/save", "URL router for save")
 	storageServerFindRouter = flag.String("findRouter", "/api/v1/storage/find", "URL router for find")
