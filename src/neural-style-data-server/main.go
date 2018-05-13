@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -84,8 +85,8 @@ func main() {
 	// Logging domain.
 	var logger log.Logger
 	{
-		logger = log.NewLogfmtLogger(os.Stderr)
-		logger = level.NewFilter(logger, level.AllowInfo())
+		logger = log.NewLogfmtLogger(os.Stdout)
+		logger = level.NewFilter(logger, level.AllowDebug())
 		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	}
 
@@ -93,7 +94,9 @@ func main() {
 
 	// HTTP transport
 	go func() {
-		level.Debug(logger).Log("info", "Start server at port "+*serverURL+":"+*serverPort)
+		// How to show the debug info
+		level.Debug(logger).Log("info", "Start server at port "+*serverURL+":"+*serverPort,
+			"time", time.Now())
 		handler := r
 		errChan <- http.ListenAndServe(*serverURL+":"+*serverPort, handler)
 	}()
@@ -105,5 +108,8 @@ func main() {
 	}()
 
 	errInfo := <-errChan
-	level.Error(logger).Log("info", "End server: "+errInfo.Error())
+	defer func(end time.Time) {
+		level.Debug(logger).Log("info", "End server: "+errInfo.Error(),
+			"time", end)
+	}(time.Now())
 }
