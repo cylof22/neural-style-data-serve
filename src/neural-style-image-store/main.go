@@ -39,7 +39,7 @@ func main() {
 	var logger log.Logger
 	{
 		logger = log.NewLogfmtLogger(os.Stderr)
-		level.NewFilter(logger, level.AllowInfo())
+		level.NewFilter(logger, level.AllowDebug())
 		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	}
 
