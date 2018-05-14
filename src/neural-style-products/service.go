@@ -168,6 +168,12 @@ func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string,
 // upload picture file
 func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string) (string, error) {
 	pos := strings.Index(picData, ",")
+	if len(picData) < 11 || pos < 7 {
+		level.Debug(svc.Logger).Log("API", "UploadPicture", "info", "Bad Picture Data", "owner", owner,
+			"DataLength", strconv.Itoa(len(picData)), "sepeatePos", strconv.Itoa(pos))
+		return "", errors.New("Bad picture data")
+	}
+
 	imgFormat := picData[11 : pos-7]
 	realData := picData[pos+1 : len(picData)]
 
@@ -222,6 +228,7 @@ func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string
 		return "", err
 	}
 
+	level.Debug(svc.Logger)
 	// construct the memcached url
 	return svc.CacheGetURL + "/" + owner + "/" + outfileName, nil
 }
