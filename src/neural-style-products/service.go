@@ -14,6 +14,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-kit/kit/log/level"
 
@@ -228,7 +229,8 @@ func (svc *ProductService) uploadPicture(owner, picData, picID, picFolder string
 		return "", err
 	}
 
-	level.Debug(svc.Logger)
+	level.Debug(svc.Logger).Log("API", "uploadPicture", "info", "upload picture successfully")
+
 	// construct the memcached url
 	return svc.CacheGetURL + "/" + owner + "/" + outfileName, nil
 }
@@ -282,6 +284,7 @@ func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, 
 	// add it to product data to the database
 	err = svc.addProduct(newProduct)
 
+	level.Debug(svc.Logger).Log("API", "UploadStyleFile", "info", "Style Upload successful", "owner", productData.Owner)
 	return newProduct, nil
 }
 
@@ -308,8 +311,13 @@ func (svc *ProductService) UploadStyleFiles(products BatchProducts) (string, err
 	}
 
 	if uploadSize == 0 {
+		level.Error(svc.Logger).Log("API", "UploadStyleFiles", "info", "No file uploaded in batch")
 		return "all fails", errors.New("All upload fails")
 	}
+
+	level.Debug(svc.Logger).Log("API", "UploadStyleFiles", "info", "Batch file upload successfully",
+		"SucessSize", uploadSize, "FailedSize", len(products.PicDatas)-uploadSize)
+
 	return "succeed", nil
 }
 
@@ -322,29 +330,40 @@ func (svc *ProductService) addProduct(product Product) error {
 	err := c.Insert(product)
 	if err != nil {
 		if mgo.IsDup(err) {
+			level.Error(svc.Logger).Log("API", "addProduct", "info", "Insert Product fails because of duplicated data", "error", err.Error())
 			return errors.New("Book with this ISBN already exists")
 		}
+		level.Error(svc.Logger).Log("API", "addProduct", "info", "Insert product to database fails", "error", err.Error())
 		return errors.New("Failed to add a new products")
 	}
 
 	return nil
 }
 
-func (svc *ProductService) DeleteProduct(productId string) error {
+// DeleteProduct delele the product by id from the database and cloud storage
+func (svc *ProductService) DeleteProduct(productID string) error {
 	session := svc.Session.Copy()
 	defer session.Close()
 
 	c := session.DB("store").C("products")
-	err := c.Remove(bson.M{"id": productId})
+	err := c.Remove(bson.M{"id": productID})
 	if err != nil {
+		level.Error(svc.Logger).Log("API", "DeleteProduct", "err", err.Error())
+		// Todo: How to return useful information for the user
 		return errors.New("Failed to delete product")
 	}
 
+	// Todo: Delete the corresponding data from the cloud storage
+	// Need owner and picture id
+
+	level.Debug(svc.Logger).Log("API", "DeleteProduct", "info", "Delete product successfully", "productID", productID)
 	return nil
 }
 
-func (svc *ProductService) UpdateProduct(productId string, productData UploadProduct) error {
-	updateProduct := Product{ID: productId}
+// UpdateProduct update the product information by id
+func (svc *ProductService) UpdateProduct(productID string, productData UploadProduct) error {
+	// Todo: Check the necessary update data
+	updateProduct := Product{ID: productID}
 	updateProduct.Owner = productData.Owner
 	updateProduct.Maker = productData.Maker
 	updateProduct.URL = productData.PicData
@@ -353,8 +372,8 @@ func (svc *ProductService) UpdateProduct(productId string, productData UploadPro
 	updateProduct.StyleImgURL = productData.StyleImgURL
 	updateProduct.Story.Description = productData.Story.Description
 	updateProduct.Type = productData.Type
-
 	updateProduct.Story.Pictures = productData.Story.Pictures
+
 	for index, pic := range productData.Story.Pictures {
 		pos := strings.Index(pic, "http")
 		if pos == 0 {
@@ -372,11 +391,15 @@ func (svc *ProductService) UpdateProduct(productId string, productData UploadPro
 
 	updateData, err := bson.Marshal(&updateProduct)
 	if err != nil {
+		// Todo: How to add the product information
+		level.Error(svc.Logger).Log("API", "UpdateProduct", "info", "bson Marshal Failes", "error", err.Error())
 		return errors.New("Failed to update product")
 	}
 	mData := bson.M{}
 	err = bson.Unmarshal(updateData, mData)
 	if err != nil {
+		// Todo: How to add the product information
+		level.Error(svc.Logger).Log("API", "UpdateProduct", "info", "bson UnMarshal fails", "error", err.Error())
 		return errors.New("Failed to update product")
 	}
 
@@ -384,14 +407,13 @@ func (svc *ProductService) UpdateProduct(productId string, productData UploadPro
 	defer session.Close()
 
 	c := session.DB("store").C("products")
-	err = c.Update(bson.M{"id": productId}, bson.M{"$set": mData})
+	err = c.Update(bson.M{"id": productID}, bson.M{"$set": mData})
 	if err != nil {
-		fmt.Println(err)
+		level.Error(svc.Logger).Log("API", "UpdateProduct", "info", "MongoDB update fails", "error", err.Error())
 		return errors.New("Failed to update product")
-	} else {
-		fmt.Println("succeed to update product")
 	}
 
+	level.Debug(svc.Logger).Log("API", "UpdateProduct", "info", "Update product successful")
 	return nil
 }
 
@@ -466,6 +488,7 @@ func (svc *ProductService) GetReviewsByProductID(id string) ([]Review, error) {
 		return reviews, nil
 	}
 
+	level.Debug(svc.Logger).Log("API", "GetReviewsByProductID", "info", "get reviews by id ok", "id", id)
 	return nil, nil
 }
 
@@ -483,6 +506,7 @@ func (svc *ProductService) GetArtists() ([]Artist, error) {
 		return artists, errors.New("Database error")
 	}
 
+	level.Debug(svc.Logger).Log("API", "GetArtists", "info", "get all artists sucessfully")
 	return artists, nil
 }
 
@@ -500,13 +524,20 @@ func (svc *ProductService) GetHotestArtists() ([]Artist, error) {
 		return artists, errors.New("Database error")
 	}
 
+	level.Debug(svc.Logger).Log("API", "GetHotestArtists", "info", "get all the hotest successfully")
 	return artists, nil
 }
 
 // AddImage add an image file to the memcached
 func (svc *ProductService) AddImage(key string, img []byte) error {
 	imgItem := memcache.Item{Key: key, Value: img}
-	return svc.CacheClient.Add(&imgItem)
+	err := svc.CacheClient.Add(&imgItem)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "AddImage", "info", "add cached image", "error", err.Error())
+	}
+
+	level.Debug(svc.Logger).Log("API", "AddImage", "info", "add cached image successfully")
+	return err
 }
 
 // GetImage get an image file from the memcached
@@ -519,12 +550,13 @@ func (svc *ProductService) GetImage(userID, imageID string) ([]byte, string, err
 
 	// re add the image again
 	if err == memcache.ErrCacheMiss {
+		startTime := time.Now()
 		storageClient := &http.Client{}
 		storageURL := svc.FindURL + "?userid=" + userID + "&imageid=" + imageID
 
 		storageReq, err := http.NewRequest("GET", storageURL, nil)
 		if err != nil {
-			level.Debug(svc.Logger).Log("API", "GetCloudImage", "info", err.Error(), "url", storageURL)
+			level.Error(svc.Logger).Log("API", "GetCloudImage", "error", err.Error(), "url", storageURL)
 			return nil, "", err
 		}
 		res, err := storageClient.Do(storageReq)
@@ -535,25 +567,30 @@ func (svc *ProductService) GetImage(userID, imageID string) ([]byte, string, err
 		var urlData map[string]string
 		err = json.NewDecoder(res.Body).Decode(&urlData)
 		if err != nil {
-			level.Debug(svc.Logger).Log("API", "GetCloudImageURL", "info", err.Error())
+			level.Error(svc.Logger).Log("API", "GetCloudImageURL", "error", err.Error())
 			return nil, "", err
 		}
 
 		// get the image data
 		imgResponse, err := http.Get(urlData["url"])
 		if err != nil {
-			level.Debug(svc.Logger).Log("API", "GetCloudImageData", "info", err.Error())
+			level.Error(svc.Logger).Log("API", "GetCloudImageData", "error", err.Error())
 			return nil, "", err
 		}
 
 		// watermark and cached data
 		img, _, err := image.Decode(imgResponse.Body)
 		if err != nil {
-			level.Debug(svc.Logger).Log("API", "ParseImageData", "info", err.Error())
+			level.Error(svc.Logger).Log("API", "ParseImageData", "error", err.Error())
 			return nil, "", err
 		}
 
+		level.Debug(svc.Logger).Log("API", "GetCloudImage", "info", "Get Cloud Image", "timeDelay", time.Since(startTime))
+		startTime = time.Now()
 		imgData, err := svc.waterMarkAndCache(img, "jpeg", userID+imageID)
+
+		level.Debug(svc.Logger).Log("API", "WaterMarkAndCache", "info", "Get watermark image and cache", "timeDelay", time.Since(startTime))
+
 		return imgData, mimeType, nil
 	}
 
