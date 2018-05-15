@@ -44,12 +44,28 @@ func (svc *loggingService) UploadStyleFiles(products BatchProducts) (info string
 	return svc.dataService.UploadStyleFiles(products)
 }
 
-func (svc *loggingService) GetProducts(params QueryParams) (prods []Product, err error) {
+func (svc *loggingService) GetProducts() (prods []Product, err error) {
 	defer func(begin time.Time) {
 		svc.logger.Log("method", "GetProducts", "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.GetProducts(params)
+	return svc.dataService.GetProducts()
+}
+
+func (svc *loggingService) GetProductsByUser(userID string) (prods []Product, err error) {
+	defer func(begin time.Time) {
+		svc.logger.Log("method", "GetProducts", "owner", userID, "took", time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.dataService.GetProductsByUser(userID)
+}
+
+func (svc *loggingService) GetProductsByTags(tags []string) (prods []Product, err error) {
+	defer func(begin time.Time) {
+		svc.logger.Log("method", "GetProductsByTags", "took", time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.dataService.GetProductsByTags(tags)
 }
 
 func (svc *loggingService) GetProductsByID(id string) (prod Product, err error) {

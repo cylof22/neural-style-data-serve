@@ -19,10 +19,6 @@ type NSStylesUploadRequest struct {
 	ProductsData BatchProducts
 }
 
-type NSQueryRequest struct {
-	QueryData QueryParams
-}
-
 // NSGetProductsResponse output the json response
 type NSGetProductsResponse struct {
 	Products []Product
@@ -92,6 +88,23 @@ type NSUpdateProductResponse struct {
 	Err error
 }
 
+type NSGetProductsByUserRequest struct {
+	User string
+}
+
+type NSGetProductsByUserResponse struct {
+	Prods []Product
+	Err   error
+}
+type NSGetProductsByTagsRequest struct {
+	Tags []string
+}
+
+type NSGetProductsByTagsResponse struct {
+	Prods []Product
+	Err   error
+}
+
 // MakeNSContentUploadEndpoint upload the content file
 func MakeNSContentUploadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -122,8 +135,7 @@ func MakeNSStylesUploadEndpoint(svc Service) endpoint.Endpoint {
 // MakeNSGetProductsEndpoint get all the transfered file
 func MakeNSGetProductsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSQueryRequest)
-		output, err := svc.GetProducts(req.QueryData)
+		output, err := svc.GetProducts()
 		return NSGetProductsResponse{Products: output, Err: err}, err
 	}
 }
@@ -186,5 +198,23 @@ func MakeNSUpdateProductEndpoint(svc Service) endpoint.Endpoint {
 		req := request.(NSUpdateProductRequest)
 		err := svc.UpdateProduct(req.ID, req.ProductData)
 		return NSUpdateProductResponse{Err: err}, err
+	}
+}
+
+// MakeNSGetProductsByUser get all products owned users
+func MakeNSGetProductsByUser(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSGetProductsByUserRequest)
+		prods, err := svc.GetProductsByUser(req.User)
+		return NSGetProductsByUserResponse{Prods: prods}, err
+	}
+}
+
+// MakeNSGetProductsByTags get all products related to the tags
+func MakeNSGetProductsByTags(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSGetProductsByTagsRequest)
+		prods, err := svc.GetProductsByTags(req.Tags)
+		return NSGetProductsByTagsResponse{Prods: prods}, err
 	}
 }
