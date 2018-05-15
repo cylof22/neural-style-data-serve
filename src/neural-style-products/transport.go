@@ -227,7 +227,7 @@ func decodeNSSearchRequest(_ context.Context, r *http.Request) (interface{}, err
 	querys := r.URL.Query()
 
 	// add check the validation of the query string
-	var queryInfo map[string]interface{}
+	queryInfo := make(map[string]interface{})
 	for key, val := range querys {
 		queryInfo[key] = val
 	}
@@ -321,8 +321,8 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	))
 
-	// GET api/products/search
-	r.Methods("GET").Path("api/products/search").Handler(httptransport.NewServer(
+	// GET api/search
+	r.Methods("GET").Path("/api/search").Handler(httptransport.NewServer(
 		MakeNSSearch(svc),
 		decodeNSSearchRequest,
 		encodeNSSearchRespones,

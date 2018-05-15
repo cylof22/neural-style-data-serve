@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -429,7 +430,23 @@ func (svc *ProductService) getQueryBSon(keyvals ...interface{}) (bson.M, error) 
 		}
 
 		// Todo: How to check the value and prevent NoSQL injection
-		query[keyStr] = val
+		valInfo := reflect.ValueOf(val)
+		switch valInfo.Kind() {
+		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint64,
+			reflect.Float32, reflect.Float64,
+			reflect.String:
+			query[keyStr] = val
+		case reflect.Array, reflect.Slice:
+			fmt.Println("Value array")
+			if valInfo.Len() == 1 {
+				query[keyStr] = valInfo.Index(0).Interface()
+			} else {
+				//Todo: How to aggregrate array values, $group?
+			}
+		default:
+			level.Debug(svc.Logger).Log("API", "getQueryBSon", "info", "unsupported value type", "type", valInfo.Kind())
+		}
 	}
 
 	if len(query) == 0 {

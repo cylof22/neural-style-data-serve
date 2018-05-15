@@ -54,7 +54,7 @@ func (svc *loggingService) GetProducts() (prods []Product, err error) {
 
 func (svc *loggingService) GetProductsByUser(userID string) (prods []Product, err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "GetProducts", "owner", userID, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "GetProductsByUser", "owner", userID, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
 	return svc.dataService.GetProductsByUser(userID)
