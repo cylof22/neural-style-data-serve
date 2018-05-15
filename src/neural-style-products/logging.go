@@ -115,10 +115,19 @@ func (svc *loggingService) DeleteProduct(productID string) (err error) {
 	}(time.Now())
 	return svc.dataService.DeleteProduct(productID)
 }
+
 func (svc *loggingService) UpdateProduct(productID string, productData UploadProduct) (err error) {
 	defer func(begin time.Time) {
 		svc.logger.Log("method", "UpdateProduct", "productID", productID, time.Since(begin), "err", err)
 	}(time.Now())
 
 	return svc.dataService.UpdateProduct(productID, productData)
+}
+
+func (svc *loggingService) Search(keyvals map[string]interface{}) (prods []Product, err error) {
+	defer func(begin time.Time) {
+		svc.logger.Log("method", "Search", "info", "Add Key and value information", time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.dataService.Search(keyvals)
 }

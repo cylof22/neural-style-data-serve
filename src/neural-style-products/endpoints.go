@@ -71,36 +71,56 @@ type NSCacheGetResponse struct {
 	Error error
 }
 
+// NSDeleteProductRequest define the id of the deleted product
 type NSDeleteProductRequest struct {
 	ID string
 }
 
+// NSDeleteProductResponse only returns the error information for delete from DB
 type NSDeleteProductResponse struct {
 	Err error
 }
 
+// NSUpdateProductRequest define the id of the updated product and its updated information
 type NSUpdateProductRequest struct {
 	ID          string
 	ProductData UploadProduct
 }
 
+// NSUpdateProductResponse only returns the error information for updating a product
 type NSUpdateProductResponse struct {
 	Err error
 }
 
+// NSGetProductsByUserRequest define the use who want to get its own products
 type NSGetProductsByUserRequest struct {
 	User string
 }
 
+// NSGetProductsByUserResponse return the error information and the use's products
 type NSGetProductsByUserResponse struct {
 	Prods []Product
 	Err   error
 }
+
+// NSGetProductsByTagsRequest define the tags for getting the products
 type NSGetProductsByTagsRequest struct {
 	Tags []string
 }
 
+// NSGetProductsByTagsResponse return the products which contains the tags
 type NSGetProductsByTagsResponse struct {
+	Prods []Product
+	Err   error
+}
+
+// NSSearchRequest define the search info for getting the products
+type NSSearchRequest struct {
+	Info map[string]interface{}
+}
+
+// NSSearchResponse return the searched products and the error information
+type NSSearchResponse struct {
 	Prods []Product
 	Err   error
 }
@@ -216,5 +236,14 @@ func MakeNSGetProductsByTags(svc Service) endpoint.Endpoint {
 		req := request.(NSGetProductsByTagsRequest)
 		prods, err := svc.GetProductsByTags(req.Tags)
 		return NSGetProductsByTagsResponse{Prods: prods}, err
+	}
+}
+
+// MakeNSSearch return the searched products by following the keywords
+func MakeNSSearch(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSSearchRequest)
+		prods, err := svc.Search(req.Info)
+		return NSSearchResponse{Prods: prods, Err: err}, err
 	}
 }

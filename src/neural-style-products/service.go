@@ -121,6 +121,7 @@ type Service interface {
 	GetImage(userID, imageID string) ([]byte, string, error)
 	DeleteProduct(productID string) error
 	UpdateProduct(productID string, productData UploadProduct) error
+	Search(keyvals map[string]interface{}) ([]Product, error)
 }
 
 // ProductService for final image style transfer
@@ -686,4 +687,31 @@ func (svc *ProductService) waterMarkAndCache(img image.Image, format, key string
 	}
 
 	return outputBuffers.Bytes(), nil
+}
+
+// Search find all the available products by following the key and values
+func (svc *ProductService) Search(keyvals map[string]interface{}) ([]Product, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	var queryInfo []interface{}
+	for key, val := range keyvals {
+		queryInfo = append(queryInfo, key)
+		queryInfo = append(queryInfo, val)
+	}
+	c := session.DB("store").C("products")
+
+	queryParams, err := svc.getQueryBSon(queryInfo...)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "Search", "error", err.Error())
+		return nil, err
+	}
+
+	var prods []Product
+	err = c.Find(queryParams).All(&prods)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "Search", "info", "Find DB fails", "error", err.Error())
+	}
+
+	return prods, nil
 }

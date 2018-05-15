@@ -223,6 +223,27 @@ func encodeNSGetProductsByTargsResponse(ctx context.Context, w http.ResponseWrit
 	return json.NewEncoder(w).Encode(productsRes.Prods)
 }
 
+func decodeNSSearchRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	querys := r.URL.Query()
+
+	// add check the validation of the query string
+	var queryInfo map[string]interface{}
+	for key, val := range querys {
+		queryInfo[key] = val
+	}
+	return NSSearchRequest{Info: queryInfo}, nil
+}
+
+func encodeNSSearchRespones(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	productsRes := response.(NSSearchResponse)
+	if productsRes.Err != nil {
+		return productsRes.Err
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(productsRes.Prods)
+}
+
 // MakeHTTPHandler generate the http handler for the style service handler
 func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middleware, svc Service, options ...httptransport.ServerOption) *mux.Router {
 	// POST /api/upload/content
@@ -297,6 +318,14 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		MakeNSGetProductByIDEndpoint(svc),
 		decodeNSGetProductByIDRequest,
 		encodeNSGetProductByIDResponse,
+		options...,
+	))
+
+	// GET api/products/search
+	r.Methods("GET").Path("api/products/search").Handler(httptransport.NewServer(
+		MakeNSSearch(svc),
+		decodeNSSearchRequest,
+		encodeNSSearchRespones,
 		options...,
 	))
 
