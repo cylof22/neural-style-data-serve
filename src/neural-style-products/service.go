@@ -35,24 +35,24 @@ type ProductStory struct {
 	Pictures    []string `json:"pictures"`
 }
 
+// ProductPrice define the basic price and type of the image
 // price type
 // const (
 // 	fix = iota
 //     auction
 //     onlyShow
 // )
-// ProductPrice define the basic price and type of the image
 type ProductPrice struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
+// UploadProduct define the full information of the uploaded image product
 // product type
 // const (
 //     Digit = iota
 //     Entity
 // )
-// UploadProduct define the full information of the uploaded image product
 type UploadProduct struct {
 	Owner       string       `json:"owner"`
 	Maker       string       `json:"maker"`

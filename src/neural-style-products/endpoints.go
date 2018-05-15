@@ -11,10 +11,12 @@ type NSUploadRequest struct {
 	ProductData Product
 }
 
+// NSStyleUploadRequest define the basic information of a uploaded style file
 type NSStyleUploadRequest struct {
 	ProductData UploadProduct
 }
 
+// NSStylesUploadRequest define the inforation of a batch uploade style files
 type NSStylesUploadRequest struct {
 	ProductsData BatchProducts
 }
@@ -36,6 +38,7 @@ type NSGetProductResponse struct {
 	Err    error
 }
 
+// NSUploadProductsResponse return the error information
 type NSUploadProductsResponse struct {
 	Result string
 	Err    error
