@@ -46,8 +46,7 @@ func (svc *loggingService) UploadStyleFiles(products BatchProducts) (info string
 
 func (svc *loggingService) GetProducts(params QueryParams) (prods []Product, err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "GetProducts", "users", params.Owner,
-			"categories", params.Categories, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "GetProducts", "took", time.Since(begin), "err", err)
 	}(time.Now())
 
 	return svc.dataService.GetProducts(params)
