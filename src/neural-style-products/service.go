@@ -438,7 +438,6 @@ func (svc *ProductService) getQueryBSon(keyvals ...interface{}) (bson.M, error) 
 			reflect.String:
 			query[keyStr] = val
 		case reflect.Array, reflect.Slice:
-			fmt.Println("Value array")
 			if valInfo.Len() == 1 {
 				query[keyStr] = valInfo.Index(0).Interface()
 			} else {
