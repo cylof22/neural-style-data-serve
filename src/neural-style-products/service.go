@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -35,24 +36,24 @@ type ProductStory struct {
 	Pictures    []string `json:"pictures"`
 }
 
+// ProductPrice define the basic price and type of the image
 // price type
 // const (
 // 	fix = iota
 //     auction
 //     onlyShow
 // )
-// ProductPrice define the basic price and type of the image
 type ProductPrice struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
+// UploadProduct define the full information of the uploaded image product
 // product type
 // const (
 //     Digit = iota
 //     Entity
 // )
-// UploadProduct define the full information of the uploaded image product
 type UploadProduct struct {
 	Owner       string       `json:"owner"`
 	Maker       string       `json:"maker"`
@@ -88,11 +89,6 @@ type Product struct {
 	Type        string       `json:"type"`
 }
 
-type QueryParams struct {
-	Categories []string `json:"categories"`
-	Owner      []string `json:"owner"`
-}
-
 // Review define the basic elements of the review
 type Review struct {
 	ID        uint32 `json:"id"`
@@ -116,7 +112,9 @@ type Service interface {
 	UploadContentFile(productData Product) (Product, error)
 	UploadStyleFile(productData UploadProduct) (Product, error)
 	UploadStyleFiles(products BatchProducts) (string, error)
-	GetProducts(params QueryParams) ([]Product, error)
+	GetProducts() ([]Product, error)
+	GetProductsByUser(userID string) ([]Product, error)
+	GetProductsByTags(tag []string) ([]Product, error)
 	GetProductsByID(id string) (Product, error)
 	GetReviewsByProductID(id string) ([]Review, error)
 	GetArtists() ([]Artist, error)
@@ -124,6 +122,7 @@ type Service interface {
 	GetImage(userID, imageID string) ([]byte, string, error)
 	DeleteProduct(productID string) error
 	UpdateProduct(productID string, productData UploadProduct) error
+	Search(keyvals map[string]interface{}) ([]Product, error)
 }
 
 // ProductService for final image style transfer
@@ -417,34 +416,106 @@ func (svc *ProductService) UpdateProduct(productID string, productData UploadPro
 	return nil
 }
 
-func getQueryBSon(params QueryParams) bson.M {
+func (svc *ProductService) getQueryBSon(keyvals ...interface{}) (bson.M, error) {
 	query := bson.M{}
-	if params.Categories != nil {
-		query["categories"] = params.Categories
+	querySize := len(keyvals)
+
+	for i := 0; i < querySize-1; i += 2 {
+		key := keyvals[i]
+		val := keyvals[i+1]
+		keyStr, ok := key.(string)
+		if !ok || len(keyStr) == 0 {
+			level.Debug(svc.Logger).Log("API", "getQueryBSon", "info", "Bad Key as string", "key", key)
+			continue
+		}
+
+		// Todo: How to check the value and prevent NoSQL injection
+		valInfo := reflect.ValueOf(val)
+		switch valInfo.Kind() {
+		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint64,
+			reflect.Float32, reflect.Float64,
+			reflect.String:
+			query[keyStr] = val
+		case reflect.Array, reflect.Slice:
+			if valInfo.Len() == 1 {
+				query[keyStr] = valInfo.Index(0).Interface()
+			} else {
+				//Todo: How to aggregrate array values, $group?
+			}
+		default:
+			level.Debug(svc.Logger).Log("API", "getQueryBSon", "info", "unsupported value type", "type", valInfo.Kind())
+		}
 	}
 
-	if params.Owner != nil {
-		query["owner"] = params.Owner[0]
+	if len(query) == 0 {
+		// Todo: how to print the query keyvals
+		level.Error(svc.Logger).Log("API", "getQueryBSon", "error", "Bad Query arguments", keyvals)
+		return nil, errors.New("Bad Query arguments")
 	}
 
-	return query
+	return query, nil
 }
 
 // GetProducts find all the generated products(images)
-func (svc *ProductService) GetProducts(params QueryParams) ([]Product, error) {
+func (svc *ProductService) GetProducts() ([]Product, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
 	c := session.DB("store").C("products")
 
 	var products []Product
-	query := getQueryBSon(params)
-	err := c.Find(query).All(&products)
+	err := c.Find(bson.M{}).All(&products)
 	if err != nil {
 		level.Debug(svc.Logger).Log("API", "GetProducts", "info", err.Error())
 		return products, errors.New("Database error")
 	}
 
+	return products, nil
+}
+
+// GetProductsByUser get all the products owner by user
+func (svc *ProductService) GetProductsByUser(userID string) ([]Product, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("products")
+
+	queryParams, err := svc.getQueryBSon("owner", userID)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "GetProductsByUser", "UserID", userID, "error", err.Error())
+		return nil, err
+	}
+
+	var products []Product
+	err = c.Find(queryParams).All(&products)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "GetProductsByUser", "UserID", userID, "error", err.Error())
+		return nil, errors.New("Database error")
+	}
+
+	return products, nil
+}
+
+// GetProductsByTags get all the products related to the tags
+func (svc *ProductService) GetProductsByTags(tags []string) ([]Product, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("products")
+
+	queryParams, err := svc.getQueryBSon("tags", tags)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "GetProductsByTags", "tags", tags, "error", err.Error())
+		return nil, errors.New("Bad query params")
+	}
+
+	var products []Product
+	err = c.Find(queryParams).All(&products)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "GetProductsByTags", "error", err.Error())
+		return nil, errors.New("Database error")
+	}
 	return products, nil
 }
 
@@ -632,4 +703,31 @@ func (svc *ProductService) waterMarkAndCache(img image.Image, format, key string
 	}
 
 	return outputBuffers.Bytes(), nil
+}
+
+// Search find all the available products by following the key and values
+func (svc *ProductService) Search(keyvals map[string]interface{}) ([]Product, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	var queryInfo []interface{}
+	for key, val := range keyvals {
+		queryInfo = append(queryInfo, key)
+		queryInfo = append(queryInfo, val)
+	}
+	c := session.DB("store").C("products")
+
+	queryParams, err := svc.getQueryBSon(queryInfo...)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "Search", "error", err.Error())
+		return nil, err
+	}
+
+	var prods []Product
+	err = c.Find(queryParams).All(&prods)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "Search", "info", "Find DB fails", "error", err.Error())
+	}
+
+	return prods, nil
 }
