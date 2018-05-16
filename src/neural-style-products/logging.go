@@ -120,7 +120,7 @@ func (svc *loggingService) DeleteProduct(productID string) (err error) {
 
 func (svc *loggingService) UpdateProduct(productID string, productData UploadProduct) (err error) {
 	defer func(begin time.Time) {
-		level.Debug(svc.logger).Log("method", "UpdateProduct", "productID", productID, time.Since(begin), "err", err)
+		level.Debug(svc.logger).Log("method", "UpdateProduct", "productID", productID, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
 	return svc.dataService.UpdateProduct(productID, productData)
