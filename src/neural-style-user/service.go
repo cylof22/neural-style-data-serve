@@ -41,6 +41,8 @@ type UserToken struct {
 type Service interface {
 	Register(userData UserInfo) (string, error)
 	Login(loginData UserInfo) (UserToken, error)
+	GetUserInfo(userName string) (UserInfo, error)
+	UpdateUserInfo(userData UserInfo) (error)
 }
 
 // UserService for user login service
@@ -74,7 +76,7 @@ func (svc *UserService) Register(userData UserInfo) (string, error) {
 	err = c.Insert(userData)
 	if err != nil {
 		result = "fail"
-		return result, errors.New("Failed to add a new user")
+		return result, errors.New("Server is busy. Please try later.")
 	}
 
 	level.Debug(svc.Logger).Log("API", "Register", "info", userData)
@@ -103,6 +105,7 @@ func (svc *UserService) Login(loginData UserInfo) (UserToken, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
+	session.DB("store")
 	c := session.DB("store").C("users")
 
 	var user UserInfo
@@ -120,4 +123,45 @@ func (svc *UserService) Login(loginData UserInfo) (UserToken, error) {
 	userToken.ID = user.ID
 	userToken.Token = CreateToken(loginData.Name, svc.Logger)
 	return userToken, err
+}
+
+func (svc *UserService) GetUserInfo(userName string) (UserInfo, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	session.DB("store")
+	c := session.DB("store").C("users")
+
+	var user UserInfo
+	err := c.Find(bson.M{"name": userName}).One(&user)
+	if err != nil {
+		return user, errors.New("can't get info for the user " + userName)
+	}
+
+	return user, nil
+}
+
+func (svc *UserService) UpdateUserInfo(userData UserInfo) (error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	session.DB("store")
+	c := session.DB("store").C("users")
+
+	updateData, err := bson.Marshal(&userData)
+	if err != nil {
+		return errors.New("Server is busy. Please try it later.")
+	}
+	mData := bson.M{}
+	err = bson.Unmarshal(updateData, mData)
+	if err != nil {
+		return errors.New("Server is busy. Please try it later.")
+	}
+
+	err = c.Update(bson.M{"name": userData.Name}, bson.M{"$set": mData})
+	if err != nil {
+		return errors.New("Server is busy. Please try it later.")
+	}
+
+	return nil
 }

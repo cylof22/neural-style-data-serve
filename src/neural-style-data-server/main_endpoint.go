@@ -12,6 +12,8 @@ import (
 
 	"neural-style-transfer"
 
+	"neural-style-order"
+
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
@@ -58,7 +60,14 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	var users UserService.Service
 	users = UserService.NewUserSVC(*serverURL, *serverPort, logger, dbSession)
 	users = UserService.NewLoggingService(log.With(logger, "component", "product"), users)
-	r = UserService.MakeHTTPHandler(ctx, r, users, options...)
+	r = UserService.MakeHTTPHandler(ctx, r, authMiddleware, users, options...)
+
+	// Order service
+	productsURL := "http://" + *serverURL + ":" + *serverPort + *productsRouter
+	var orders OrderService.Service
+	orders = OrderService.NewOrderSVC(*serverURL, *serverPort, logger, dbSession, productsURL)
+	orders = OrderService.NewLoggingService(log.With(logger, "component", "order"), orders)
+	r = OrderService.MakeHTTPHandler(ctx, r, authMiddleware, orders, options...)
 
 	return r
 }

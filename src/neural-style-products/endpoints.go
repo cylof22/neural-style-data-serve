@@ -92,6 +92,15 @@ type NSUpdateProductResponse struct {
 	Err error
 }
 
+type NSUpdateProductOwnerRequest struct {
+	ID          string
+	NewOwner    string
+}
+
+type NSUpdateProductOwnerResponse struct {
+	Err error
+}
+
 // MakeNSContentUploadEndpoint upload the content file
 func MakeNSContentUploadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -186,5 +195,14 @@ func MakeNSUpdateProductEndpoint(svc Service) endpoint.Endpoint {
 		req := request.(NSUpdateProductRequest)
 		err := svc.UpdateProduct(req.ID, req.ProductData)
 		return NSUpdateProductResponse{Err: err}, err
+	}
+}
+
+// MakeNSUpdateProductEndpoint updates one product
+func MakeNSUpdateProductOwnerEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSUpdateProductOwnerRequest)
+		err := svc.UpdateProductOwner(req.ID, req.NewOwner)
+		return NSUpdateProductOwnerResponse{Err: err}, err
 	}
 }
