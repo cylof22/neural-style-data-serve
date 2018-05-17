@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -15,14 +16,15 @@ import (
 )
 
 var (
-	serverURL               = flag.String("host", "localhost", "neural style server url")
+	serverURL               = flag.String("host", "0.0.0.0", "neural style server url")
 	serverPort              = flag.String("port", "8000", "neural style server port")
-	dbServerURL             = flag.String("dbserver", "localhost", "style products server url")
+	dbServerURL             = flag.String("dbserver", "0.0.0.0", "style products server url")
 	dbServerPort            = flag.String("dbport", "9000", "style products port url")
-	storageServerURL        = flag.String("storageURL", "localhost", "Storage Server URL")
+	storageServerURL        = flag.String("storageURL", "0.0.0.0", "Storage Server URL")
 	storageServerPort       = flag.String("storagePort", "5000", "Storage Server Port")
 	storageServerSaveRouter = flag.String("saveRouter", "/api/v1/storage/save", "URL router for save")
 	storageServerFindRouter = flag.String("findRouter", "/api/v1/storage/find", "URL router for find")
+	cacheServer             = flag.String("cacheHost", "www.elforce.net", "memcached host")
 	cacheGetRouter          = flag.String("cacheGetURL", "/api/v1/cache/get", "Cache Get Router")
 	localDev                = flag.Bool("local", false, "Disable Cloud Storage and local Memcached")
 	networkPath             = flag.String("network", "", "neural network model path")
@@ -97,8 +99,8 @@ func main() {
 	// Logging domain.
 	var logger log.Logger
 	{
-		logger = log.NewLogfmtLogger(os.Stderr)
-		logger = level.NewFilter(logger, level.AllowInfo())
+		logger = log.NewLogfmtLogger(os.Stdout)
+		logger = level.NewFilter(logger, level.AllowDebug())
 		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	}
 
@@ -106,7 +108,9 @@ func main() {
 
 	// HTTP transport
 	go func() {
-		level.Debug(logger).Log("info", "Start server at port "+*serverURL+":"+*serverPort)
+		// How to show the debug info
+		level.Debug(logger).Log("info", "Start server at port "+*serverURL+":"+*serverPort,
+			"time", time.Now())
 		handler := r
 		errChan <- http.ListenAndServe(*serverURL+":"+*serverPort, handler)
 	}()
@@ -118,5 +122,8 @@ func main() {
 	}()
 
 	errInfo := <-errChan
-	level.Error(logger).Log("info", "End server: "+errInfo.Error())
+	defer func(end time.Time) {
+		level.Debug(logger).Log("info", "End server: "+errInfo.Error(),
+			"time", end)
+	}(time.Now())
 }

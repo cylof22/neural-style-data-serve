@@ -23,6 +23,12 @@
 		
 		go get github.com/Azure/azure-storage-blob-go
 		
+		go get github.com/bradfitz/gomemcache/memcache
+		
+		go get golang.org/x/image
+		
+          If no VPN, please create the folder src/golang/org/x and git clone https://github.com/golang/image .
+		
 	 (2) Define the local GOPATH environment for the go build
 	 
 	    export GOPATH="source-code-folder"

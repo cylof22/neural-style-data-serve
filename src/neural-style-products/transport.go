@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/go-kit/kit/endpoint"
@@ -65,12 +64,7 @@ func encodeNSUploadStylesResponse(ctx context.Context, w http.ResponseWriter, re
 }
 
 func decodeNSGetProductsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	queryData, _ := url.ParseQuery(r.URL.RawQuery)
-	queryBytes, _ := json.Marshal(queryData)
-
-	var params QueryParams
-	json.Unmarshal(queryBytes, &params)
-	return NSQueryRequest{QueryData: params}, nil
+	return nil, nil
 }
 
 func encodeNSGetProductsResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
@@ -213,6 +207,61 @@ func encodeNSUpdateProductOwnerResponse(ctx context.Context, w http.ResponseWrit
 	return nil
 }
 
+func decodeNSGetProductsByUserRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	userID := vars["usrid"]
+
+	return NSGetProductsByUserRequest{User: userID}, nil
+}
+
+func encodeGetProductsByUserResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	productsRes := response.(NSGetProductsByUserResponse)
+	if productsRes.Err != nil {
+		return productsRes.Err
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(productsRes.Prods)
+}
+
+func decodeNSGetProductsByTagsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	tags := vars["tags"]
+
+	return NSGetProductsByTagsRequest{Tags: []string{tags}}, nil
+}
+
+func encodeNSGetProductsByTargsResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	productsRes := response.(NSGetProductsByTagsResponse)
+	if productsRes.Err != nil {
+		return productsRes.Err
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(productsRes.Prods)
+}
+
+func decodeNSSearchRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	querys := r.URL.Query()
+
+	// add check the validation of the query string
+	queryInfo := make(map[string]interface{})
+	for key, val := range querys {
+		queryInfo[key] = val
+	}
+	return NSSearchRequest{Info: queryInfo}, nil
+}
+
+func encodeNSSearchRespones(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	productsRes := response.(NSSearchResponse)
+	if productsRes.Err != nil {
+		return productsRes.Err
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(productsRes.Prods)
+}
+
 // MakeHTTPHandler generate the http handler for the style service handler
 func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middleware, svc Service, options ...httptransport.ServerOption) *mux.Router {
 	// POST /api/upload/content
@@ -266,11 +315,35 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	))
 
+	// GET api/products/{userid}
+	r.Methods("GET").Path("/api/products/{usrid}").Handler(httptransport.NewServer(
+		auth(MakeNSGetProductsByUser(svc)),
+		decodeNSGetProductsByUserRequest,
+		encodeGetProductsByUserResponse,
+		options...,
+	))
+
+	// GET api/products/{tags}
+	r.Methods("GET").Path("/api/products/{tags}").Handler(httptransport.NewServer(
+		MakeNSGetProductsByTags(svc),
+		decodeNSGetProductsByTagsRequest,
+		encodeNSGetProductsByTargsResponse,
+		options...,
+	))
+
 	// GET api/products/{id}
 	r.Methods("GET").Path("/api/products/{id}").Handler(httptransport.NewServer(
 		MakeNSGetProductByIDEndpoint(svc),
 		decodeNSGetProductByIDRequest,
 		encodeNSGetProductByIDResponse,
+		options...,
+	))
+
+	// GET api/search
+	r.Methods("GET").Path("/api/search").Handler(httptransport.NewServer(
+		MakeNSSearch(svc),
+		decodeNSSearchRequest,
+		encodeNSSearchRespones,
 		options...,
 	))
 

@@ -11,16 +11,14 @@ type NSUploadRequest struct {
 	ProductData Product
 }
 
+// NSStyleUploadRequest define the basic information of a uploaded style file
 type NSStyleUploadRequest struct {
 	ProductData UploadProduct
 }
 
+// NSStylesUploadRequest define the inforation of a batch uploade style files
 type NSStylesUploadRequest struct {
 	ProductsData BatchProducts
-}
-
-type NSQueryRequest struct {
-	QueryData QueryParams
 }
 
 // NSGetProductsResponse output the json response
@@ -40,6 +38,7 @@ type NSGetProductResponse struct {
 	Err    error
 }
 
+// NSUploadProductsResponse return the error information
 type NSUploadProductsResponse struct {
 	Result string
 	Err    error
@@ -75,19 +74,23 @@ type NSCacheGetResponse struct {
 	Error error
 }
 
+// NSDeleteProductRequest define the id of the deleted product
 type NSDeleteProductRequest struct {
 	ID string
 }
 
+// NSDeleteProductResponse only returns the error information for delete from DB
 type NSDeleteProductResponse struct {
 	Err error
 }
 
+// NSUpdateProductRequest define the id of the updated product and its updated information
 type NSUpdateProductRequest struct {
 	ID          string
 	ProductData UploadProduct
 }
 
+// NSUpdateProductResponse only returns the error information for updating a product
 type NSUpdateProductResponse struct {
 	Err error
 }
@@ -99,6 +102,39 @@ type NSUpdateProductOwnerRequest struct {
 
 type NSUpdateProductOwnerResponse struct {
 	Err error
+}
+
+// NSGetProductsByUserRequest define the use who want to get its own products
+type NSGetProductsByUserRequest struct {
+	User string
+}
+
+// NSGetProductsByUserResponse return the error information and the use's products
+type NSGetProductsByUserResponse struct {
+	Prods []Product
+	Err   error
+}
+
+// NSGetProductsByTagsRequest define the tags for getting the products
+type NSGetProductsByTagsRequest struct {
+	Tags []string
+}
+
+// NSGetProductsByTagsResponse return the products which contains the tags
+type NSGetProductsByTagsResponse struct {
+	Prods []Product
+	Err   error
+}
+
+// NSSearchRequest define the search info for getting the products
+type NSSearchRequest struct {
+	Info map[string]interface{}
+}
+
+// NSSearchResponse return the searched products and the error information
+type NSSearchResponse struct {
+	Prods []Product
+	Err   error
 }
 
 // MakeNSContentUploadEndpoint upload the content file
@@ -131,8 +167,7 @@ func MakeNSStylesUploadEndpoint(svc Service) endpoint.Endpoint {
 // MakeNSGetProductsEndpoint get all the transfered file
 func MakeNSGetProductsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSQueryRequest)
-		output, err := svc.GetProducts(req.QueryData)
+		output, err := svc.GetProducts()
 		return NSGetProductsResponse{Products: output, Err: err}, err
 	}
 }
@@ -204,5 +239,32 @@ func MakeNSUpdateProductOwnerEndpoint(svc Service) endpoint.Endpoint {
 		req := request.(NSUpdateProductOwnerRequest)
 		err := svc.UpdateProductOwner(req.ID, req.NewOwner)
 		return NSUpdateProductOwnerResponse{Err: err}, err
+	}
+}
+
+// MakeNSGetProductsByUser get all products owned users
+func MakeNSGetProductsByUser(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSGetProductsByUserRequest)
+		prods, err := svc.GetProductsByUser(req.User)
+		return NSGetProductsByUserResponse{Prods: prods}, err
+	}
+}
+
+// MakeNSGetProductsByTags get all products related to the tags
+func MakeNSGetProductsByTags(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSGetProductsByTagsRequest)
+		prods, err := svc.GetProductsByTags(req.Tags)
+		return NSGetProductsByTagsResponse{Prods: prods}, err
+	}
+}
+
+// MakeNSSearch return the searched products by following the keywords
+func MakeNSSearch(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSSearchRequest)
+		prods, err := svc.Search(req.Info)
+		return NSSearchResponse{Prods: prods, Err: err}, err
 	}
 }
