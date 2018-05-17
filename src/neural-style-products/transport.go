@@ -316,7 +316,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 	))
 
 	// GET api/products/{userid}
-	r.Methods("GET").Path("/api/products/{usrid}").Handler(httptransport.NewServer(
+	r.Methods("GET").Path("/api/products").Queries("usrid", "{usrid}").Handler(httptransport.NewServer(
 		auth(MakeNSGetProductsByUser(svc)),
 		decodeNSGetProductsByUserRequest,
 		encodeGetProductsByUserResponse,
@@ -324,7 +324,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 	))
 
 	// GET api/products/{tags}
-	r.Methods("GET").Path("/api/products/{tags}").Handler(httptransport.NewServer(
+	r.Methods("GET").Path("/api/products").Queries("tags", "{tags}").Handler(httptransport.NewServer(
 		MakeNSGetProductsByTags(svc),
 		decodeNSGetProductsByTagsRequest,
 		encodeNSGetProductsByTargsResponse,
@@ -332,7 +332,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 	))
 
 	// GET api/products/{id}
-	r.Methods("GET").Path("/api/products/{id}").Handler(httptransport.NewServer(
+	r.Methods("GET").Path("/api/products").Queries("id", "{id}").Handler(httptransport.NewServer(
 		MakeNSGetProductByIDEndpoint(svc),
 		decodeNSGetProductByIDRequest,
 		encodeNSGetProductByIDResponse,
