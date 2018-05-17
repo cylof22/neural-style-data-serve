@@ -126,6 +126,14 @@ func (svc *loggingService) UpdateProduct(productID string, productData UploadPro
 	return svc.dataService.UpdateProduct(productID, productData)
 }
 
+func (svc *loggingService) UpdateProductOwner(productId string, newOwner string) (err error) {
+	defer func(begin time.Time) {
+		svc.logger.Log("method", "UpdateProductOwner", "productId", productId, "newOwner", newOwner, "took", time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.dataService.UpdateProductOwner(productId, newOwner)
+}
+
 func (svc *loggingService) Search(keyvals map[string]interface{}) (prods []Product, err error) {
 	defer func(begin time.Time) {
 		level.Debug(svc.logger).Log("method", "Search", "info", "How to add keyvals", "took", time.Since(begin), "err", err)

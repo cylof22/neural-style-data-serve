@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"image"
 	"image/color"
 	"mime"
@@ -21,6 +20,7 @@ import (
 
 	"neural-style-image-watermark"
 	"neural-style-util"
+	"neural-style-chain"
 
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/go-kit/kit/log"
@@ -44,8 +44,9 @@ type ProductStory struct {
 //     onlyShow
 // )
 type ProductPrice struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
+	Type     string `json:"type"`
+	Value    string `json:"value"`
+	Duration string `json:"duration"`
 }
 
 // UploadProduct define the full information of the uploaded image product
@@ -63,6 +64,7 @@ type UploadProduct struct {
 	Tags        []string     `json:"tags"`
 	Story       ProductStory `json:"story"`
 	Type        string       `json:"type"`
+	ChainId     string       `json:"chainId"`
 }
 
 // BatchProducts define the products information for the batched uploaded image products
@@ -87,6 +89,7 @@ type Product struct {
 	Tags        []string     `json:"tags"`
 	Story       ProductStory `json:"story"`
 	Type        string       `json:"type"`
+	ChainId     string       `json:"chainId"`
 }
 
 // Review define the basic elements of the review
@@ -120,8 +123,9 @@ type Service interface {
 	GetArtists() ([]Artist, error)
 	GetHotestArtists() ([]Artist, error)
 	GetImage(userID, imageID string) ([]byte, string, error)
-	DeleteProduct(productID string) error
-	UpdateProduct(productID string, productData UploadProduct) error
+	DeleteProduct(productID string) (error)
+	UpdateProduct(productID string, productData UploadProduct) (error)
+	UpdateProductOwner(productId string, newOwner string) (error)
 	Search(keyvals map[string]interface{}) ([]Product, error)
 }
 
@@ -241,7 +245,6 @@ func (svc *ProductService) UploadContentFile(productData Product) (Product, erro
 
 	newContent := Product{ID: imageID}
 	if err != nil {
-		fmt.Println(err)
 		return newContent, err
 	}
 
@@ -336,6 +339,16 @@ func (svc *ProductService) addProduct(product Product) error {
 		return errors.New("Failed to add a new products")
 	}
 
+	productId := product.ID
+	chainId, err := ChainService.UploadProduct(productId)
+	if err != nil {
+		return errors.New("Failed to upload product to chain")
+	}
+	err = c.Update(bson.M{"id": productId}, bson.M{"$set": bson.M{"chainId": chainId}})
+	if err != nil {
+		return errors.New("Failed to update chain id after uploading product")
+	}
+
 	return nil
 }
 
@@ -371,8 +384,9 @@ func (svc *ProductService) UpdateProduct(productID string, productData UploadPro
 	updateProduct.StyleImgURL = productData.StyleImgURL
 	updateProduct.Story.Description = productData.Story.Description
 	updateProduct.Type = productData.Type
-	updateProduct.Story.Pictures = productData.Story.Pictures
+	updateProduct.ChainId = productData.ChainId
 
+	updateProduct.Story.Pictures = productData.Story.Pictures
 	for index, pic := range productData.Story.Pictures {
 		pos := strings.Index(pic, "http")
 		if pos == 0 {
@@ -412,7 +426,21 @@ func (svc *ProductService) UpdateProduct(productID string, productData UploadPro
 		return errors.New("Failed to update product")
 	}
 
-	level.Debug(svc.Logger).Log("API", "UpdateProduct", "info", "Update product successful")
+	return nil
+}
+
+func (svc *ProductService) UpdateProductOwner(productId string, newOwner string) error {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	updateData := bson.M{"owner": newOwner}
+	c := session.DB("store").C("products")
+	err := c.Update(bson.M{"id": productId}, bson.M{"$set": updateData})
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "Date.Update", "Error", err)
+		return errors.New("Failed to update product owner")
+	}
+
 	return nil
 }
 

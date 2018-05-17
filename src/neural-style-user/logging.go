@@ -31,3 +31,20 @@ func (svc *loggingService) Login(loginData UserInfo) (token UserToken, err error
 
 	return svc.loginService.Login(loginData)
 }
+
+func (svc *loggingService) GetUserInfo(userName string) (userInfo UserInfo, err error) {
+	defer func(begin time.Time) {
+		svc.logger.Log("method", "GetUserInfo", "userName", userName, "took", time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.loginService.GetUserInfo(userName)
+}
+
+func (svc *loggingService) UpdateUserInfo(userData UserInfo) (err error) {
+	defer func(begin time.Time) {
+		svc.logger.Log("method", "UpdateUserInfo", "took", time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.loginService.UpdateUserInfo(userData)
+}
+

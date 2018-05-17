@@ -30,12 +30,13 @@ var (
 	networkPath             = flag.String("network", "", "neural network model path")
 	previewNetworkPath      = flag.String("previewNetwork", "", "neural network preview model path")
 	outputPath              = flag.String("outputdir", "./", "neural style transfer output directory")
+	productsRouter          = flag.String("productsRouter", "/api/products", "URL router for products")
 )
 
 func ensureIndex(s *mgo.Session) {
 	session := s.Copy()
 	defer session.Close()
-
+	
 	products := session.DB("store").C("products")
 
 	index := mgo.Index{
@@ -61,6 +62,19 @@ func ensureIndex(s *mgo.Session) {
 	}
 
 	err = reviews.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
+	orders := session.DB("store").C("orders")
+	index = mgo.Index{
+		Key:        []string{"productId"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = orders.EnsureIndex(index)
 	if err != nil {
 		panic(err)
 	}

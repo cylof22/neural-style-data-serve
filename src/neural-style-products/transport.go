@@ -189,6 +189,24 @@ func encodeNSUpdateProductResponse(ctx context.Context, w http.ResponseWriter, r
 	return nil
 }
 
+
+func decodeNSUpdateProductOwnerRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	owner := vars["owner"]
+
+	return NSUpdateProductOwnerRequest{ID: id, NewOwner: owner}, nil
+}
+
+func encodeNSUpdateProductOwnerResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	updateError := response.(NSUpdateProductOwnerResponse)
+	if updateError.Err != nil {
+		return updateError.Err
+	}
+
+	return nil
+}
+
 func decodeNSGetProductsByUserRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	userID := vars["usrid"]
@@ -358,6 +376,14 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		auth(MakeNSUpdateProductEndpoint(svc)),
 		decodeNSUpdateProductRequest,
 		encodeNSUpdateProductResponse,
+		options...,
+	))
+
+	// GET /api/products/{id}/ownerupdate/{owner}
+	r.Methods("GET").Path("/api/products/{id}/ownerupdate/{owner}").Handler(httptransport.NewServer(
+		MakeNSUpdateProductOwnerEndpoint(svc),
+		decodeNSUpdateProductOwnerRequest,
+		encodeNSUpdateProductOwnerResponse,
 		options...,
 	))
 
