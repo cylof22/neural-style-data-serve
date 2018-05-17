@@ -105,7 +105,6 @@ func (svc *UserService) Login(loginData UserInfo) (UserToken, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
-	session.DB("store")
 	c := session.DB("store").C("users")
 
 	var user UserInfo
@@ -129,7 +128,6 @@ func (svc *UserService) GetUserInfo(userName string) (UserInfo, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
-	session.DB("store")
 	c := session.DB("store").C("users")
 
 	var user UserInfo
@@ -145,7 +143,6 @@ func (svc *UserService) UpdateUserInfo(userData UserInfo) (error) {
 	session := svc.Session.Copy()
 	defer session.Close()
 
-	session.DB("store")
 	c := session.DB("store").C("users")
 
 	updateData, err := bson.Marshal(&userData)
