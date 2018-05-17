@@ -125,7 +125,7 @@ type Service interface {
 	GetImage(userID, imageID string) ([]byte, string, error)
 	DeleteProduct(productID string) (error)
 	UpdateProduct(productID string, productData UploadProduct) (error)
-	UpdateProductOwner(productId string, newOwner string) (error)
+	UpdateProductAfterTransaction(productId string, newOwner string, newPrice string) (error)
 	Search(keyvals map[string]interface{}) ([]Product, error)
 }
 
@@ -429,11 +429,11 @@ func (svc *ProductService) UpdateProduct(productID string, productData UploadPro
 	return nil
 }
 
-func (svc *ProductService) UpdateProductOwner(productId string, newOwner string) error {
+func (svc *ProductService) UpdateProductAfterTransaction(productId string, newOwner string, newPrice string) error {
 	session := svc.Session.Copy()
 	defer session.Close()
 
-	updateData := bson.M{"owner": newOwner}
+	updateData := bson.M{"owner": newOwner, "price.value": newPrice}
 	c := session.DB("store").C("products")
 	err := c.Update(bson.M{"id": productId}, bson.M{"$set": updateData})
 	if err != nil {
