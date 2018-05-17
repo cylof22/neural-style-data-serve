@@ -190,16 +190,18 @@ func encodeNSUpdateProductResponse(ctx context.Context, w http.ResponseWriter, r
 }
 
 
-func decodeNSUpdateProductOwnerRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeNSUpdateProductAfterTransactionRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	owner := vars["owner"]
 
-	return NSUpdateProductOwnerRequest{ID: id, NewOwner: owner}, nil
+	updateData := NSUtil.TransactionUpdateData{}
+	json.NewDecoder(r.Body).Decode(&updateData)
+
+	return NSUpdateProductAfterTransactionRequest{ID: id, NewOwner: updateData.Owner, NewPrice: updateData.Price}, nil
 }
 
-func encodeNSUpdateProductOwnerResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	updateError := response.(NSUpdateProductOwnerResponse)
+func encodeNSUpdateProductAfterTransactionResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	updateError := response.(NSUpdateProductAfterTransactionResponse)
 	if updateError.Err != nil {
 		return updateError.Err
 	}
@@ -316,7 +318,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 	))
 
 	// GET api/products/{userid}
-	r.Methods("GET").Path("/api/products").Queries("usrid", "{usrid}").Handler(httptransport.NewServer(
+	r.Methods("GET").Path("/api/products/user/{usrid}").Handler(httptransport.NewServer(
 		auth(MakeNSGetProductsByUser(svc)),
 		decodeNSGetProductsByUserRequest,
 		encodeGetProductsByUserResponse,
@@ -324,7 +326,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 	))
 
 	// GET api/products/{tags}
-	r.Methods("GET").Path("/api/products").Queries("tags", "{tags}").Handler(httptransport.NewServer(
+	r.Methods("GET").Path("/api/products/tags/{tags}").Handler(httptransport.NewServer(
 		MakeNSGetProductsByTags(svc),
 		decodeNSGetProductsByTagsRequest,
 		encodeNSGetProductsByTargsResponse,
@@ -332,7 +334,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 	))
 
 	// GET api/products/{id}
-	r.Methods("GET").Path("/api/products").Queries("id", "{id}").Handler(httptransport.NewServer(
+	r.Methods("GET").Path("/api/products/{id}").Handler(httptransport.NewServer(
 		MakeNSGetProductByIDEndpoint(svc),
 		decodeNSGetProductByIDRequest,
 		encodeNSGetProductByIDResponse,
@@ -379,11 +381,11 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	))
 
-	// GET /api/products/{id}/ownerupdate/{owner}
-	r.Methods("GET").Path("/api/products/{id}/ownerupdate/{owner}").Handler(httptransport.NewServer(
-		MakeNSUpdateProductOwnerEndpoint(svc),
-		decodeNSUpdateProductOwnerRequest,
-		encodeNSUpdateProductOwnerResponse,
+	// POST /api/products/{id}/transactionupdate/
+	r.Methods("POST").Path("/api/products/{id}/transactionupdate").Handler(httptransport.NewServer(
+		MakeNSUpdateProductAfterTransactionEndpoint(svc),
+		decodeNSUpdateProductAfterTransactionRequest,
+		encodeNSUpdateProductAfterTransactionResponse,
 		options...,
 	))
 

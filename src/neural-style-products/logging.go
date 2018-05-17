@@ -126,12 +126,12 @@ func (svc *loggingService) UpdateProduct(productID string, productData UploadPro
 	return svc.dataService.UpdateProduct(productID, productData)
 }
 
-func (svc *loggingService) UpdateProductOwner(productId string, newOwner string) (err error) {
+func (svc *loggingService) UpdateProductAfterTransaction(productId string, newOwner string, newPrice string) (err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "UpdateProductOwner", "productId", productId, "newOwner", newOwner, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "UpdateProductAfterTransaction", "productId", productId, "newOwner", newOwner, "newPrice", newPrice, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.UpdateProductOwner(productId, newOwner)
+	return svc.dataService.UpdateProductAfterTransaction(productId, newOwner, newPrice)
 }
 
 func (svc *loggingService) Search(keyvals map[string]interface{}) (prods []Product, err error) {

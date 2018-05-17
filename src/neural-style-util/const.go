@@ -29,3 +29,8 @@ const (
     ReturnCompleted         // return is completed
     Failed                  // transaction fails
 )
+
+type TransactionUpdateData struct {
+	Owner       string       `json:"owner"`
+	Price       string       `json:"price"`
+}

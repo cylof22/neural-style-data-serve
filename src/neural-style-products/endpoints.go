@@ -2,7 +2,6 @@ package ProductService
 
 import (
 	"context"
-
 	"github.com/go-kit/kit/endpoint"
 )
 
@@ -95,12 +94,13 @@ type NSUpdateProductResponse struct {
 	Err error
 }
 
-type NSUpdateProductOwnerRequest struct {
+type NSUpdateProductAfterTransactionRequest struct {
 	ID          string
 	NewOwner    string
+	NewPrice    string
 }
 
-type NSUpdateProductOwnerResponse struct {
+type NSUpdateProductAfterTransactionResponse struct {
 	Err error
 }
 
@@ -234,11 +234,11 @@ func MakeNSUpdateProductEndpoint(svc Service) endpoint.Endpoint {
 }
 
 // MakeNSUpdateProductEndpoint updates one product
-func MakeNSUpdateProductOwnerEndpoint(svc Service) endpoint.Endpoint {
+func MakeNSUpdateProductAfterTransactionEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSUpdateProductOwnerRequest)
-		err := svc.UpdateProductOwner(req.ID, req.NewOwner)
-		return NSUpdateProductOwnerResponse{Err: err}, err
+		req := request.(NSUpdateProductAfterTransactionRequest)
+		err := svc.UpdateProductAfterTransaction(req.ID, req.NewOwner, req.NewPrice)
+		return NSUpdateProductAfterTransactionResponse{Err: err}, err
 	}
 }
 
