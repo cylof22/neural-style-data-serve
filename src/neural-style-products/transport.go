@@ -406,10 +406,6 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 	resourceFile := http.FileServer(http.Dir("dist"))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", resourceFile))
 
-	// template file
-	commonFile := http.FileServer(http.Dir("data/common"))
-	r.PathPrefix("/common/").Handler(http.StripPrefix("/common/", commonFile))
-
 	r.Path("/").Handler(resourceFile)
 
 	return r
