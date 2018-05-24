@@ -49,6 +49,14 @@
 	 (5) Now only two Services. The Products, and User Service, and User Service should be independent services in 	   
 	     future.
 	 
+	 (6) MongoDB 
+	 
+	     Launch the MongoDB: mongod --port 9000
+	 
+	 (7) Memcached
+	     
+	     Launch the Memcached: use the default port now. Need more discussions for the memcached service deployment.
+	     
 2.  Deploy Process
     
 	 (1) Web Service, Products, and User Service
