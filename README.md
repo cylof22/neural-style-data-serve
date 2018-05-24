@@ -33,31 +33,50 @@
 	 
 	    export GOPATH="source-code-folder"
 			
-	 (3) Build the transfer server
+	 (3) Build the Product, Web and User Service
 	 
 	    cd source-code-folder/src/neural-style-data-server
-			 
-		go install -v ./...
-			 
-   (4) After executing the go install command, the source-code-folder/bin will be created. You can see the neural-style-data-server
-		   program.
-			 
-	 (5) Build docker image. When launching the docker, the shared volumes for the network and image folder is required.
+	    
+	    go install -v ./...
+	    
+	 (4) Build the Azure Cloud Storage Service
 	 
-	    cd source-code-folder
+	    cd source-code-folder/src/neural-style-image-store
+	    
+	    go install -v ./...
+	    
 			 
-		docker build -t neural-style-data-server .
-		
-			 
-2. Launch transfer serve
-   The server has three configuration parameters: "host", "port", and "network". The "host" and "port" are the server's network address.
-	 The default values is "localhost:9090". The default value of the network is empty, which means that the "imagenet-vgg-verydeep-19.mat" 
-	 is placed in the same folder with the "neural-style-data-server" program.
-   
-	 The HTTP server for the style transfer is GET "server address"//styleTransfer/?content="content image location"&style="style image location"
-	 &output="output image location"&iterations = 100.
+	 (5) Now only two Services. The Products, and User Service, and User Service should be independent services in 	   
+	     future.
 	 
-	 The content, style, and output image location is encrypted by using base64.StdEncoding. You can see it in the transport.go.
-	 
+2.  Deploy Process
+    
+	 (1) Web Service, Products, and User Service
+	     The Basic command arguments are: 
+	     host          = Service Address, default is 0.0.0.0
+	     port          = Service Port: default is 8000
+	     dbserver      = MongoDB Server Address: default 0.0.0.0, need login information in future.
+	     dbport        = MongoDB Server Port: default is 9000
+	     storageURL    = Azure Cloud Storage Service Address: default is 0.0.0.0
+	     storagePort   = Azure Cloud Storage Service Port: default is 5000
+	     cacheHost     = Memcached Service Address: default is www.elforce.net. Need to access from the web, so use the 
+	         	     External products address. In future the value will be a a group of address:port which is 
+			     seperated by ';', This is done by the product service, and is not related with the deployment.
+			     
+	     The Basic Environments are 
+	     TOKEN_KEY: used by the user service to parse the jwt token.
+	 (2) Azure Cloud Storage Service
+	     The Basic command arguments are:
+	     host         = Service address, default is 0.0.0.0
+	     port         = Service Port: default is 5000
+	     dbserver     = MongoDB Service Address: default is 0.0.0.0. Need login information in future.
+	     dbport       = MongoDB Service Port: default is 9000.
+	     
+	     The Basic Enviroments: 
+	     MAX_WORKERS           = Internal Storage Engine worker size, default value is 2 now.
+	     MAX_QUEUE             = Internal Storage Engine job queue size, default value is 2 now.
+	     AZURE_STORAGE_ACCOUNT = Azure Storage Account, only one string. In future, it will be a group of storage  					     accounts seperated by ';'. 
+	     AZURE_STORAGE_KEY     = Azure Storage Account key, only one string now. Like account string, it will be a group  					   of key.
+	     AZURE_STORAGE_URL     = Azure Storage URL. For china, '.blob.core.chinacloudapi.cn', and for others, 					     '.blob.core.windows.net'.
 	
 	
