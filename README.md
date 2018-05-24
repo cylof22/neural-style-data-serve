@@ -52,6 +52,7 @@
 2.  Deploy Process
     
 	 (1) Web Service, Products, and User Service
+	 
 	     The Basic command arguments are: 
 	     host          = Service Address, default is 0.0.0.0
 	     port          = Service Port: default is 8000
@@ -66,6 +67,7 @@
 	     The Basic Environments are 
 	     TOKEN_KEY: used by the user service to parse the jwt token.
 	 (2) Azure Cloud Storage Service
+	 
 	     The Basic command arguments are:
 	     host         = Service address, default is 0.0.0.0
 	     port         = Service Port: default is 5000
