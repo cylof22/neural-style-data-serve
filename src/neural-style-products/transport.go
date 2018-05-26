@@ -189,7 +189,6 @@ func encodeNSUpdateProductResponse(ctx context.Context, w http.ResponseWriter, r
 	return nil
 }
 
-
 func decodeNSUpdateProductAfterTransactionRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id := vars["id"]
@@ -397,6 +396,10 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 	// style file server
 	styleFiles := http.FileServer(http.Dir("data/styles/"))
 	r.PathPrefix("/styles/").Handler(http.StripPrefix("/styles", styleFiles))
+
+	// artist masterpiece server
+	masterFiles := http.FileServer(http.Dir("data/masters/"))
+	r.PathPrefix("/masters/").Handler(http.StripPrefix("/masters/", masterFiles))
 
 	// content file server
 	contentFiles := http.FileServer(http.Dir("data/contents"))
