@@ -388,6 +388,10 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	))
 
+	// add tencent yun authorization ssl file
+	authFiles := http.FileServer(http.Dir("data/auth/"))
+	r.PathPrefix("/.well-known/pki-validation/").Handler(http.StripPrefix("/.well-known/pki-validation/", authFiles))
+
 	// Todo: Web Service maybe need a seperate server
 	// output file server
 	outputFiles := http.FileServer(http.Dir("data/outputs/"))
