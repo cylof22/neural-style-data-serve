@@ -15,11 +15,6 @@
         "modelname": "monet2photo_256"
     },
     {
-        "name": "Camille Corot",
-        "masterpiece": "http://www.elforce.net/masters/souvenir-of-mortefontaine-1864.jpg",
-        "modelname": "corot2photo_256"
-    },
-    {
         "name": "Pierre-Auguste Renoir",
         "masterpiece": "http://www.elforce.net/masters/on-the-path-1872.jpg",
         "modelname": "renoir2photo_256"
@@ -30,16 +25,6 @@
         "modelname": "matisse2photo_256"
     },
     {
-        "name": "Georges Rouault",
-        "masterpiece": "http://www.elforce.net/masters/trois-personnages-dans-un-paysage-de-bretagne-1915.jpeg",
-        "modelname": "rouault2photo_256"
-    },
-    {
-        "name": "Giorgio de Chirico",
-        "masterpiece": "http://www.elforce.net/masters/the-poet-s-farewell-1923.jpeg",
-        "modelname": "chirico2photo_256"
-    },
-    {
         "name": "Wassily Kandinsky",
         "masterpiece": "http://www.elforce.net/masters/on-white-ii-1923.jpg",
         "modelname": "kandinsky2photo_256"
@@ -48,10 +33,5 @@
         "name": "Joan Miro",
         "masterpiece": "http://www.elforce.net/masters/the-farm-1922.jpg",
         "modelname": "miro2photo_256"
-    },
-    {
-        "name": "Pieter Bruegel the Elder",
-        "masterpiece": "http://www.elforce.net/masters/icarus.jpg",
-        "modelname": "bruegel2photo_256"
     }
 ]
