@@ -22,7 +22,7 @@ var (
 	certFile     = flag.String("cert", "./data/tls/214699506910084.pem", "TLS cert file path")
 	keyFile      = flag.String("key", "./data/tls/214699506910084.key", "TLS key file path")
 	transferURL  = flag.String("aihost", "j2o0918626.iask.in", "AI Server")
-	transferPort = flag.String("aiport", "58075", "AI Port")
+	transferPort = flag.String("aiport", "41327", "AI Port")
 )
 
 func main() {
