@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	serverURL    = flag.String("host", "127.0.0.1", "neural style server url")
+	serverURL    = flag.String("host", "0.0.0.0", "neural style server url")
 	serverPort   = flag.String("port", "9090", "neural style server port")
 	domainURL    = flag.String("domain", "tulian.17dodo.com", "external domain")
 	domainPort   = flag.String("dPort", "9090", "external domain port")
