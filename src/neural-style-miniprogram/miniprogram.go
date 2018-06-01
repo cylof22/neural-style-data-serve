@@ -15,7 +15,7 @@ import (
 func MakeHTTPHandler(ctx context.Context) *mux.Router {
 	r := mux.NewRouter()
 
-	hostSite := "http://" + *serverURL + ":" + *serverPort + "/mini"
+	hostSite := "https://" + *domainURL + ":" + *domainPort + "/mini"
 	transferSite := "http://" + *transferURL + ":" + *transferPort
 	r.Methods("POST").Path("/mini/content").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		file, headers, err := req.FormFile("file")
