@@ -17,8 +17,8 @@ import (
 var (
 	serverURL    = flag.String("host", "localhost", "neural style server url")
 	serverPort   = flag.String("port", "9090", "neural style server port")
-	certFile     = flag.String("cert", "", "TLS cert file path")
-	keyFile      = flag.String("key", "", "TLS key file path")
+	certFile     = flag.String("cert", "./data/tls/214699506910084.pem", "TLS cert file path")
+	keyFile      = flag.String("key", "./data/tls/214699506910084.key", "TLS key file path")
 	transferURL  = flag.String("aihost", "localhost", "AI Server")
 	transferPort = flag.String("aiport", "5000", "AI Port")
 )
@@ -43,8 +43,7 @@ func main() {
 		level.Debug(logger).Log("info", "Start server at port "+*serverURL+":"+*serverPort,
 			"time", time.Now())
 		handler := r
-		//errChan <- http.ListenAndServeTLS(*serverURL+":"+*serverPort, *certFile, *keyFile, handler)
-		errChan <- http.ListenAndServe(*serverURL+":"+*serverPort, handler)
+		errChan <- http.ListenAndServeTLS(*serverURL+":"+*serverPort, *certFile, *keyFile, handler)
 	}()
 
 	go func() {
