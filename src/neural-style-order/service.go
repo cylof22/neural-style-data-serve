@@ -20,7 +20,7 @@ import (
 
 var generalErrorInfo = "Server is busy. Please try it later."
 var maxDuration = 30
-var testDev bool = false;
+var testDev bool = true;
 type OrderStatus struct {
 	Status            string   `json:"status"`
 }
@@ -122,7 +122,7 @@ func (svc *OrderService) GetOrdersInTransaction() ([]Order, error) {
 func (svc *OrderService) GetOrderByProductId(productId string) (Order, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	c := session.DB("store").C("orders")
 
 	var order Order
@@ -149,7 +149,7 @@ func (svc *OrderService) Sell(sellInfo Order) (error) {
 
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	c := session.DB("store").C("orders")
 	var order Order
 	err := c.Find(bson.M{"product.id": sellInfo.Product.Id}).One(&order)
@@ -271,7 +271,7 @@ func (svc *OrderService) Buy(orderId string, buyInfo BuyInfo) (error) {
 	// update order info
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	c := session.DB("store").C("orders")
 	buyInfo.ServerStartTime = time.Now()
 	updateData := bson.M{"buyinfo": buyInfo,
@@ -369,7 +369,7 @@ func (svc *OrderService) ApplyConfirmFromChain(chainId string, result string) (e
 func (svc *OrderService) getOrderByChainId(chainId string) (Order, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	c := session.DB("store").C("orders")
 
 	var order Order
@@ -434,7 +434,7 @@ func (svc *OrderService) ShipProduct(orderId string, express Express) (error) {
 
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	express.StartTime = time.Now()
 	updateData := bson.M{"express": express, "status": strconv.Itoa(NSUtil.Dispatched)}
 	c := session.DB("store").C("orders")
@@ -498,7 +498,7 @@ func (svc *OrderService) AskForReturn(orderId string, returnInfo ReturnInfo) (er
 
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	askStartTime := time.Now()
 	savedReturnInfo := svc.convertReturnInfo(order.BuyInfo.Buyer, returnInfo)
 	savedReturnInfo.AskTime = askStartTime
@@ -544,7 +544,7 @@ func (svc *OrderService) AgreeReturn(orderId string) (error) {
 
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	returnInfo := order.ReturnInfo
 	returnInfo.AgreeTime = time.Now()
 	updateData := bson.M{"returninfo": returnInfo, "status": strconv.Itoa(NSUtil.ReturnAgreed)}
@@ -573,7 +573,7 @@ func (svc *OrderService) ShipReturn(orderId string, express Express) (error) {
 
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	returnInfo := order.ReturnInfo
 	returnInfo.Express = express
 	returnInfo.Express.StartTime = time.Now()
@@ -606,7 +606,7 @@ func (svc *OrderService) ConfirmReturn(orderId string) (error) {
 	// update data in database
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	returnInfo := order.ReturnInfo
 	returnInfo.ConfirmTime = time.Now()
 	updateData := bson.M{"returninfo": returnInfo, "status": strconv.Itoa(NSUtil.ReturnConfirmed)}
@@ -657,7 +657,7 @@ func (svc *OrderService) ApplyCancelFromChain(chainId string, result string) (er
 func (svc *OrderService) updateOrderStatus(orderId string, orderStatus int) (error) {
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	var currentStatus = strconv.Itoa(orderStatus);
 	c := session.DB("store").C("orders")
 	err := c.Update(bson.M{"id": orderId}, bson.M{"$set": bson.M{"status": currentStatus}})
@@ -674,7 +674,7 @@ func (svc *OrderService) closeOrder(order Order) (error) {
 	level.Debug(svc.Logger).Log("func", "closeOrder")
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	order.CompleteTime = time.Now()
 
 	c := session.DB("store").C("closedorders")
@@ -696,7 +696,7 @@ func (svc *OrderService) GetOrders(buyer string) ([]Order, error) {
 	level.Debug(svc.Logger).Log("Input", "buyer", "Value", buyer)
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	c := session.DB("store").C("orders")
 
 	var orders []Order
@@ -713,7 +713,7 @@ func (svc *OrderService) GetSellings(seller string) ([]Order, error) {
 	level.Debug(svc.Logger).Log("Input", "seller", "Value", seller)
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	c := session.DB("store").C("orders")
 
 	var orders []Order
@@ -730,7 +730,7 @@ func (svc *OrderService) getOrderById(orderId string) (Order, error) {
 	level.Debug(svc.Logger).Log("Func", "getOrderById")
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	c := session.DB("store").C("orders")
 
 	var order Order
@@ -747,7 +747,7 @@ func (svc *OrderService) deleteOrder(orderId string) (error) {
 	level.Debug(svc.Logger).Log("Func", "deleteOrder")
 	session := svc.Session.Copy()
 	defer session.Close()
-
+	
 	c := session.DB("store").C("orders")
 
 	err := c.Remove(bson.M{"id": orderId})
