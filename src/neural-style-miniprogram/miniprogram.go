@@ -1,4 +1,4 @@
-package miniprogram
+package main
 
 import (
 	"context"
@@ -11,14 +11,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const (
-	//miniURL = "https://www.tulian.17dodo.com"
-	transferURL = "http://localhost:5000"
-	hostSite    = "http://localhost:8000"
-)
-
 // MakeHTTPHandler generate the api for miniprogram
-func MakeHTTPHandler(ctx context.Context, r *mux.Router) *mux.Router {
+func MakeHTTPHandler(ctx context.Context) *mux.Router {
+	r := mux.NewRouter()
+
+	hostSite := "http://" + *serverURL + ":" + *serverPort + "/mini"
+	transferSite := "http://" + *transferURL + ":" + *transferPort
 	r.Methods("POST").Path("/mini/content").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		file, headers, err := req.FormFile("file")
 		if file == nil {
@@ -56,7 +54,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router) *mux.Router {
 	})
 
 	r.Methods("GET").Path("/mini/styleTransfer").Queries("content", "{content}", "style", "{style}").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		styleTransferURL := transferURL + "/styleTransfer"
+		styleTransferURL := transferSite + "/styleTransfer"
 		vars := mux.Vars(req)
 		content := vars["content"]
 		style := vars["style"]
@@ -101,7 +99,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router) *mux.Router {
 	})
 
 	r.Methods("GET").Path("/mini/fixedStyle").Queries("content", "{content}", "style", "{style}").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		styleTransferURL := transferURL + "/fixedStyle"
+		styleTransferURL := transferSite + "/fixedStyle"
 		vars := mux.Vars(req)
 		content := vars["content"]
 		style := vars["style"]
@@ -141,7 +139,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router) *mux.Router {
 	})
 
 	r.Methods("GET").Path("/mini/artistStyle").Queries("content", "{content}", "artist", "{artist}").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		artistTransferURL := transferURL + "/artistStyle"
+		artistTransferURL := transferSite + "/artistStyle"
 		vars := mux.Vars(req)
 		content := vars["content"]
 		artist := vars["artist"]
@@ -178,6 +176,18 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router) *mux.Router {
 
 		w.Write([]byte(hostSite + "/outputs/" + artist + fileName))
 	})
+
+	// output file server
+	outputFiles := http.FileServer(http.Dir("data/outputs/"))
+	r.PathPrefix("/mini/outputs/").Handler(http.StripPrefix("/mini/outputs/", outputFiles))
+
+	// style file server
+	styleFiles := http.FileServer(http.Dir("data/styles/"))
+	r.PathPrefix("/mini/styles/").Handler(http.StripPrefix("/mini/styles", styleFiles))
+
+	// content file server
+	contentFiles := http.FileServer(http.Dir("data/contents"))
+	r.PathPrefix("/mini/contents/").Handler(http.StripPrefix("/mini/contents/", contentFiles))
 
 	return r
 }
