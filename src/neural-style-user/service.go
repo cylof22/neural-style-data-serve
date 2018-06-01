@@ -5,6 +5,10 @@ import (
 	"neural-style-util"
 	"os"
 	"time"
+	"path"
+	"strings"
+	"strconv"
+	"encoding/base64"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-kit/kit/log/level"
@@ -26,15 +30,17 @@ type UserInfo struct {
 	Password          string   `json:"password"`
 	Phone             string   `json:"phone"`
 	Email             string   `json:"email"`
+	Portrait          string   `json:"headPortraitUrl"`
 	ConcernedProducts []string `json:"concernedProducts"`
 	ConcernedUsers    []string `json:"concernedUsers"`
 }
 
 // UserToken define the authorization information
 type UserToken struct {
-	ID    string `json:"id"`
-	Name  string `json:"username"`
-	Token string `json:"token"`
+	ID    		string `json:"id"`
+	Name  		string `json:"username"`
+	Token 		string `json:"token"`
+	Portrait    string `json:"headPortraitUrl"`
 }
 
 // Service define the basic login interface
@@ -42,7 +48,7 @@ type Service interface {
 	Register(userData UserInfo) (string, error)
 	Login(loginData UserInfo) (UserToken, error)
 	GetUserInfo(userName string) (UserInfo, error)
-	UpdateUserInfo(userData UserInfo) (error)
+	UpdateUserInfo(userData UserInfo) (string, error)
 }
 
 // UserService for user login service
@@ -121,6 +127,7 @@ func (svc *UserService) Login(loginData UserInfo) (UserToken, error) {
 	userToken.Name = user.Name
 	userToken.ID = user.ID
 	userToken.Token = CreateToken(loginData.Name, svc.Logger)
+	userToken.Portrait = user.Portrait
 	return userToken, err
 }
 
@@ -139,7 +146,25 @@ func (svc *UserService) GetUserInfo(userName string) (UserInfo, error) {
 	return user, nil
 }
 
-func (svc *UserService) UpdateUserInfo(userData UserInfo) (error) {
+func (svc *UserService) UpdateUserInfo(userData UserInfo) (string, error) {
+	pos := strings.Index(userData.Portrait, "http")
+	if pos != 0 {
+		imageID := NSUtil.UniqueID()
+		newImageURL, err := svc.uploadPicture(userData.Portrait, imageID, "portraits")
+		if err != nil {
+			return "", errors.New("Server is busy. Please try it later.")
+		}
+		userData.Portrait = newImageURL
+	}
+
+	if userData.Password == "" {
+		user, err := svc.GetUserInfo(userData.Name)
+		if err != nil {
+			return "", errors.New("Server is busy. Please try it later.")
+		}
+		userData.Password = user.Password
+	}
+
 	session := svc.Session.Copy()
 	defer session.Close()
 
@@ -147,18 +172,58 @@ func (svc *UserService) UpdateUserInfo(userData UserInfo) (error) {
 
 	updateData, err := bson.Marshal(&userData)
 	if err != nil {
-		return errors.New("Server is busy. Please try it later.")
+		return "", errors.New("Server is busy. Please try it later.")
 	}
 	mData := bson.M{}
 	err = bson.Unmarshal(updateData, mData)
 	if err != nil {
-		return errors.New("Server is busy. Please try it later.")
+		return "", errors.New("Server is busy. Please try it later.")
 	}
 
 	err = c.Update(bson.M{"name": userData.Name}, bson.M{"$set": mData})
 	if err != nil {
-		return errors.New("Server is busy. Please try it later.")
+		return "", errors.New("Server is busy. Please try it later.")
 	}
 
-	return nil
+	return userData.Portrait, nil
+}
+
+func (svc *UserService) uploadPicture(picData, picID, picFolder string) (string, error) {
+	pos := strings.Index(picData, ",")
+	if len(picData) < 11 || pos < 7 {
+		level.Debug(svc.Logger).Log("API", "UploadPicture", "info", "Bad Picture Data",
+			"DataLength", strconv.Itoa(len(picData)), "sepeatePos", strconv.Itoa(pos))
+		return "", errors.New("Bad picture data")
+	}
+
+	imgFormat := picData[11 : pos-7]
+	realData := picData[pos+1 : len(picData)]
+
+	baseData, err := base64.StdEncoding.DecodeString(realData)
+	if err != nil {
+		return "", err
+	}
+
+	// if the folder exists
+	currentFolder := path.Join("./data", picFolder)
+	_, err = os.Stat(currentFolder)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(currentFolder, 0777)
+		if err != nil {
+			return "", err
+		} 
+	}
+
+	outfileName := picID + "." + imgFormat
+	// Local FrontEnd Dev version
+	outfilePath := path.Join(currentFolder, outfileName)
+
+	outputFile, _ := os.Create(outfilePath)
+	defer outputFile.Close()
+
+	outputFile.Write(baseData)
+
+	newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
+	level.Debug(svc.Logger).Log("Picture URL", newImageURL)
+	return newImageURL, nil
 }

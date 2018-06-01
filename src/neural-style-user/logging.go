@@ -40,7 +40,7 @@ func (svc *loggingService) GetUserInfo(userName string) (userInfo UserInfo, err 
 	return svc.loginService.GetUserInfo(userName)
 }
 
-func (svc *loggingService) UpdateUserInfo(userData UserInfo) (err error) {
+func (svc *loggingService) UpdateUserInfo(userData UserInfo) (newPortrait string, err error) {
 	defer func(begin time.Time) {
 		svc.logger.Log("method", "UpdateUserInfo", "took", time.Since(begin), "err", err)
 	}(time.Now())

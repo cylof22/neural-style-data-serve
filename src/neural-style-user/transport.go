@@ -70,12 +70,13 @@ func decodeNSUpdateUserInfoRequest(_ context.Context, r *http.Request) (interfac
 }
 
 func encodeNSUpdateUserInfoResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	updateError := response.(NSUpdateUserInfoResponse)
-	if updateError.Err != nil {
-		return updateError.Err
+	updateRes := response.(NSUpdateUserInfoResponse)
+	if updateRes.Err != nil {
+		return updateRes.Err
 	}
 
-	return nil
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(updateRes.Portrait)
 }
 
 // MakeHTTPHandler generate the http handler for the style service handler
@@ -113,6 +114,10 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	)
 	r.Methods("POST").Path("/api/v1/users/{username}/update").Handler(NSUtil.AccessControl(updateUserInfoHandler))
+
+	// content file server
+	contentFiles := http.FileServer(http.Dir("data/portraits"))
+	r.PathPrefix("/portraits/").Handler(http.StripPrefix("/portraits/", contentFiles))
 
 	return r
 }
