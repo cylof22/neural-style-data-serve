@@ -40,6 +40,10 @@ func encodeNSOrdersResponse(ctx context.Context, w http.ResponseWriter, response
 	return json.NewEncoder(w).Encode(ordersRes.Orders)
 }
 
+func decodeNSGetOrdersInTransactionRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return nil, nil
+}
+
 func decodeNSGetSellingsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	username := vars["username"]
@@ -127,6 +131,14 @@ func decodeNSAskForReturnRequest(_ context.Context, r *http.Request) (interface{
 
 // MakeHTTPHandler generate the http handler for the style service handler
 func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middleware, svc Service, options ...httptransport.ServerOption) *mux.Router {
+	// GET /api/v1/transactionorders
+	r.Methods("GET").Path("/api/v1/transactionorders").Handler(httptransport.NewServer(
+		MakeNSGetOrdersInTransactionEndpoint(svc),
+		decodeNSGetOrdersInTransactionRequest,
+		encodeNSOrdersResponse,
+		options...,
+	))
+
 	// GET /api/v1/orders/{username}
 	r.Methods("GET").Path("/api/v1/orders/{username}").Handler(httptransport.NewServer(
 		auth(MakeNSGetOrdersEndpoint(svc)),
@@ -145,7 +157,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 
 	// GET /api/v1/order
 	r.Methods("GET").Path("/api/v1/order").Handler(httptransport.NewServer(
-		auth(MakeNSGetOrderByProductIdEndpoint(svc)),
+		MakeNSGetOrderByProductIdEndpoint(svc),
 		decodeNSGetOrderByProductIdRequest,
 		encodeNSGetOrderByProductIdResponse,
 		options...,

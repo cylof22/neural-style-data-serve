@@ -20,6 +20,7 @@ import (
 
 var generalErrorInfo = "Server is busy. Please try it later."
 var maxDuration = 30
+var testDev bool = false;
 type OrderStatus struct {
 	Status            string   `json:"status"`
 }
@@ -71,6 +72,7 @@ type ReturnInfo struct {
 
 // Service define the basic interface
 type Service interface {
+	GetOrdersInTransaction() ([]Order, error)
 	GetOrders(buyer string) ([]Order, error)
 	GetSellings(seller string) ([]Order, error)
 	GetOrderByProductId(productId string) (Order, error)
@@ -99,6 +101,22 @@ type OrderService struct {
 // NewUserSVC create a new user service
 func NewOrderSVC(host, port string, logger log.Logger, session *mgo.Session, productsURL string) *OrderService {
 	return &OrderService{Host: host, Port: port, Logger: logger, Session: session, ProductsURL: productsURL}
+}
+
+func (svc *OrderService) GetOrdersInTransaction() ([]Order, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("orders")
+
+	var orders []Order
+	err := c.Find(bson.M{}).All(&orders)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "Data.Find", "Info", err)
+		return orders, errors.New(generalErrorInfo)
+	}
+
+	return orders, nil
 }
 
 func (svc *OrderService) GetOrderByProductId(productId string) (Order, error) {
@@ -262,6 +280,13 @@ func (svc *OrderService) Buy(orderId string, buyInfo BuyInfo) (error) {
 	if err != nil {
 		level.Error(svc.Logger).Log("API", "Date.Update", "Info", err)
 		return errors.New(generalErrorInfo)
+	}
+
+
+	if testDev {
+		if order.Product.PriceType == strconv.Itoa(NSUtil.Fix) {
+			svc.ApplyConfirmFromChain(orderId, "success");
+		}
 	}
 
 	return nil
@@ -448,6 +473,12 @@ func (svc *OrderService) ConfirmOrder(orderId string) (error) {
 	}
 
 	ChainService.ConfirmOrder(order.ChainId)
+
+	if testDev {
+		if order.Product.PriceType == strconv.Itoa(NSUtil.Fix) {
+			svc.ApplyConfirmFromChain(orderId, "success");
+		}
+	}
 	
 	return nil
 }
@@ -584,6 +615,12 @@ func (svc *OrderService) ConfirmReturn(orderId string) (error) {
 	if err != nil {
 		level.Error(svc.Logger).Log("API", "Data.Update", "Info", err)
 		return errors.New(generalErrorInfo)
+	}
+
+	if testDev {
+		if order.Product.PriceType == strconv.Itoa(NSUtil.Fix) {
+			svc.ApplyCancelFromChain(orderId, "success");
+		}
 	}
 
 	return nil

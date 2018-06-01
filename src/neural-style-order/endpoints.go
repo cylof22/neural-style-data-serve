@@ -68,6 +68,13 @@ func MakeNSGetOrdersEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
+func MakeNSGetOrdersInTransactionEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		orders, err := svc.GetOrdersInTransaction()
+		return NSOrdersResponse{Orders: orders, Err: err}, err
+	}
+}
+
 func MakeNSGetSellingsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSGetSellingsRequest)

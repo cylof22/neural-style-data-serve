@@ -38,6 +38,7 @@ type NSAUpdateUserInfoRequest struct {
 
 // NSRegisterResponse returns register result
 type NSUpdateUserInfoResponse struct {
+	Portrait string
 	Err    error
 }
 
@@ -70,7 +71,7 @@ func MakeNSGetUserInfoEndpoint(svc Service) endpoint.Endpoint {
 func MakeNSUpdateUserInfoEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSAUpdateUserInfoRequest)
-		err := svc.UpdateUserInfo(req.UserData)
-		return NSUpdateUserInfoResponse{Err: err}, err
+		result, err := svc.UpdateUserInfo(req.UserData)
+		return NSUpdateUserInfoResponse{Portrait: result, Err: err}, err
 	}
 }
