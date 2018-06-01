@@ -15,6 +15,14 @@ func NewLoggingService(logger log.Logger, s Service) Service {
 	return &orderService{logger, s}
 }
 
+func (svc *orderService) GetOrdersInTransaction() (orders []Order, err error){
+	defer func(begin time.Time) {
+		svc.logger.Log("method", "GetOrdersInTransaction", "took", time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.dataService.GetOrdersInTransaction()
+}
+
 func (svc *orderService) GetOrders(buyer string) (orders []Order, err error){
 	defer func(begin time.Time) {
 		svc.logger.Log("method", "GetOrders", "buyer", buyer, "took", time.Since(begin), "err", err)
