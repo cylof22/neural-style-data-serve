@@ -21,8 +21,8 @@ var (
 	domainPort   = flag.String("dPort", "9090", "external domain port")
 	certFile     = flag.String("cert", "./data/tls/214699506910084.pem", "TLS cert file path")
 	keyFile      = flag.String("key", "./data/tls/214699506910084.key", "TLS key file path")
-	transferURL  = flag.String("aihost", "j2o0918626.iask.in", "AI Server")
-	transferPort = flag.String("aiport", "41327", "AI Port")
+	transferURL  = flag.String("aihost", "39.106.123.1", "AI Server")
+	transferPort = flag.String("aiport", "9091", "AI Port")
 )
 
 func main() {

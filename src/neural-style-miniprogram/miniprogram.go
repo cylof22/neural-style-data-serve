@@ -104,13 +104,6 @@ func MakeHTTPHandler(ctx context.Context) *mux.Router {
 		content := vars["content"]
 		style := vars["style"]
 
-		// decode the content
-		contentURL, err := base64.StdEncoding.DecodeString(content)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		fileName := filepath.Base(string(contentURL))
-
 		styleTransferURL = styleTransferURL + "?content=" + content + "&style=" + style
 
 		transferReq, err := http.NewRequest("GET", styleTransferURL, nil)
@@ -123,6 +116,13 @@ func MakeHTTPHandler(ctx context.Context) *mux.Router {
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
+
+		// decode the content
+		contentURL, err := base64.StdEncoding.DecodeString(content)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		fileName := filepath.Base(string(contentURL))
 
 		outputFilePath := "./data/outputs/" + style + fileName
 		outputFile, err := os.Create(outputFilePath)
