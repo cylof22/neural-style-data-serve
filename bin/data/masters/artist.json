@@ -1,0 +1,37 @@
+[
+    {
+        "name": "Vincent Willem van Gogh",
+        "masterpiece": "http://www.elforce.net/masters/still-life-vase-with-fifteen-sunflowers-1888-1.jpg",
+        "modelname": "vangogh2photo_256"
+    },
+    {
+        "name": "Paul Cezanne",
+        "masterpiece": "http://www.elforce.net/masters/forest.jpg",
+        "modelname": "cezanne2photo_256"
+    },
+    {
+        "name": "Claude Monet",
+        "masterpiece": "http://www.elforce.net/masters/autumn-on-the-seine-at-argenteuil.jpg",
+        "modelname": "monet2photo_256"
+    },
+    {
+        "name": "Pierre-Auguste Renoir",
+        "masterpiece": "http://www.elforce.net/masters/on-the-path-1872.jpg",
+        "modelname": "renoir2photo_256"
+    },
+    {
+        "name": "Henri Matisse",
+        "masterpiece": "http://www.elforce.net/masters/belle-ile-le-port-de-palais-1896.jpeg",
+        "modelname": "matisse2photo_256"
+    },
+    {
+        "name": "Wassily Kandinsky",
+        "masterpiece": "http://www.elforce.net/masters/on-white-ii-1923.jpg",
+        "modelname": "kandinsky2photo_256"
+    },
+    {
+        "name": "Joan Miro",
+        "masterpiece": "http://www.elforce.net/masters/the-farm-1922.jpg",
+        "modelname": "miro2photo_256"
+    }
+]

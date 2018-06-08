@@ -189,7 +189,6 @@ func encodeNSUpdateProductResponse(ctx context.Context, w http.ResponseWriter, r
 	return nil
 }
 
-
 func decodeNSUpdateProductAfterTransactionRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id := vars["id"]
@@ -389,6 +388,10 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	))
 
+	// add tencent yun authorization ssl file
+	authFiles := http.FileServer(http.Dir("data/auth/"))
+	r.PathPrefix("/.well-known/pki-validation/").Handler(http.StripPrefix("/.well-known/pki-validation/", authFiles))
+
 	// Todo: Web Service maybe need a seperate server
 	// output file server
 	outputFiles := http.FileServer(http.Dir("data/outputs/"))
@@ -397,6 +400,10 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 	// style file server
 	styleFiles := http.FileServer(http.Dir("data/styles/"))
 	r.PathPrefix("/styles/").Handler(http.StripPrefix("/styles", styleFiles))
+
+	// artist masterpiece server
+	masterFiles := http.FileServer(http.Dir("data/masters/"))
+	r.PathPrefix("/masters/").Handler(http.StripPrefix("/masters/", masterFiles))
 
 	// content file server
 	contentFiles := http.FileServer(http.Dir("data/contents"))
