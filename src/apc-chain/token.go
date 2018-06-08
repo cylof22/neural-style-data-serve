@@ -1,4 +1,4 @@
-package UserService
+package main
 
 import (
 	"encoding/json"
@@ -28,6 +28,11 @@ type TokenSaleInfo struct {
 }
 
 func (svc *TokenSaleService) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	info := TokenSaleInfo{}
 	json.NewDecoder(req.Body).Decode(&info)
 
