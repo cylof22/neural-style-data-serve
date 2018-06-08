@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	mgo "gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // NewTokenPreSale create new token sale service
@@ -30,6 +31,7 @@ type TokenSaleInfo struct {
 func (svc *TokenSaleService) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		res.WriteHeader(http.StatusBadRequest)
+		res.Write([]byte("Unsupported Method"))
 		return
 	}
 
@@ -38,6 +40,7 @@ func (svc *TokenSaleService) ServeHTTP(res http.ResponseWriter, req *http.Reques
 
 	if len(info.Address) == 0 {
 		res.WriteHeader(http.StatusBadRequest)
+		res.Write([]byte("Bad wallet address"))
 		return
 	}
 
@@ -46,7 +49,13 @@ func (svc *TokenSaleService) ServeHTTP(res http.ResponseWriter, req *http.Reques
 
 	c := session.DB("store").C("tokens")
 
-	err := c.Insert(info)
+	count, err := c.Find(bson.M{"address": info.Address}).Count()
+	if err != nil || count != 0 {
+		res.Write([]byte("Duplicated Wallet address"))
+		res.WriteHeader(http.StatusBadRequest)
+	}
+
+	err = c.Insert(info)
 	if err != nil {
 		res.Write([]byte(err.Error()))
 		res.WriteHeader(http.StatusBadRequest)
