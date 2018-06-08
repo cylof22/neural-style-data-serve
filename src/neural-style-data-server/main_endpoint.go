@@ -70,7 +70,7 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	r = OrderService.MakeHTTPHandler(ctx, r, authMiddleware, orders, options...)
 
 	tokensvc := UserService.NewTokenPreSale(dbSession)
-	r.Path("/token").Handler(tokensvc)
+	r.Methods("POST").Path("/token").Handler(tokensvc)
 
 	return r
 }
