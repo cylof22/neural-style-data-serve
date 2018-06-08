@@ -26,6 +26,8 @@
 		go get github.com/bradfitz/gomemcache/memcache
 		
 		go get golang.org/x/image
+
+		go get github.com/rs/cors
 		
           If no VPN, please create the folder src/golang/org/x and git clone https://github.com/golang/image .
 		
