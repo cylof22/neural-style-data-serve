@@ -6,15 +6,11 @@ import (
 	"net/http"
 	"neural-style-util"
 
-	"github.com/rs/cors"
-
 	"neural-style-products"
 
 	"neural-style-user"
 
 	"neural-style-transfer"
-
-	"neural-style-order"
 
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -63,16 +59,6 @@ func makeHTTPHandler(ctx context.Context, dbSession *mgo.Session, logger log.Log
 	users = UserService.NewUserSVC(*serverURL, *serverPort, logger, dbSession)
 	users = UserService.NewLoggingService(log.With(logger, "component", "user"), users)
 	r = UserService.MakeHTTPHandler(ctx, r, authMiddleware, users, options...)
-
-	// Order service
-	productsURL := "http://" + *serverURL + ":" + *serverPort + *productsRouter
-	var orders OrderService.Service
-	orders = OrderService.NewOrderSVC(*serverURL, *serverPort, logger, dbSession, productsURL)
-	orders = OrderService.NewLoggingService(log.With(logger, "component", "order"), orders)
-	r = OrderService.MakeHTTPHandler(ctx, r, authMiddleware, orders, options...)
-
-	tokensvc := UserService.NewTokenPreSale(dbSession)
-	r.Methods("POST").Path("/token").Handler(cors.Default().Handler(tokensvc))
 
 	return r
 }

@@ -1,66 +1,80 @@
-package OrderService
+package main
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+
 	"github.com/go-kit/kit/endpoint"
 )
 
-
+// NSGetOrdersRequest define params for getting orders for a given buyer
 type NSGetOrdersRequest struct {
 	Buyer string
 }
 
+// NSOrdersResponse returns all the orders for a given buyer
 type NSOrdersResponse struct {
-	Orders   []Order
-	Err      error
+	Orders []Order
+	Err    error
 }
 
+// NSGetSellingsRequest define the basic information fo the selling
 type NSGetSellingsRequest struct {
 	Seller string
 }
 
-type NSGetOrderByProductIdRequest struct {
-	ProductId string
+// NSGetOrderByProductIDRequest define the params for get order by product id
+type NSGetOrderByProductIDRequest struct {
+	ProductID string
 }
 
-type NSGetOrderByProductIdResponse struct {
-	Target    Order
-	Err       error
+// NSGetOrderByProductIDResponse returns the order for a given product id
+type NSGetOrderByProductIDResponse struct {
+	Target Order
+	Err    error
 }
 
+// NSSellRequest define the basic information for launching a selling request
 type NSSellRequest struct {
-	SellInfo  Order
+	SellInfo Order
 }
 
+// NSErrorResponse define the basic response for a given error
 type NSErrorResponse struct {
-	Err       error
+	Err error
 }
 
-type NSOrderIdRequest struct {
-	OrderId   string
+// NSOrderIDRequest define the basic id request
+type NSOrderIDRequest struct {
+	OrderID string
 }
 
+// NSBuyRequest define the basic parameter for a buy request
 type NSBuyRequest struct {
-	OrderId   string
-	BuyData   BuyInfo
+	OrderID string
+	BuyData BuyInfo
 }
 
+// NSChainRequest define the chainid and result information for a chain request
 type NSChainRequest struct {
-	ChainId   string
-	Result    string
+	ChainID string
+	Result  string
 }
 
+// NSExpressRequest define the basic params for a express request
 type NSExpressRequest struct {
-	OrderId     string
+	OrderID     string
 	ExpressData Express
 }
 
+// NSAskForReturnRequest define the basic return request params
 type NSAskForReturnRequest struct {
-	OrderId     string
-	ReturnData  ReturnInfo
+	OrderID    string
+	ReturnData ReturnInfo
 }
 
-func MakeNSGetOrdersEndpoint(svc Service) endpoint.Endpoint {
+func makeNSGetOrdersEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSGetOrdersRequest)
 		orders, err := svc.GetOrders(req.Buyer)
@@ -68,14 +82,14 @@ func MakeNSGetOrdersEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
-func MakeNSGetOrdersInTransactionEndpoint(svc Service) endpoint.Endpoint {
+func makeNSGetOrdersInTransactionEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		orders, err := svc.GetOrdersInTransaction()
 		return NSOrdersResponse{Orders: orders, Err: err}, err
 	}
 }
 
-func MakeNSGetSellingsEndpoint(svc Service) endpoint.Endpoint {
+func makeNSGetSellingsEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSGetSellingsRequest)
 		orders, err := svc.GetSellings(req.Seller)
@@ -83,15 +97,15 @@ func MakeNSGetSellingsEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
-func MakeNSGetOrderByProductIdEndpoint(svc Service) endpoint.Endpoint {
+func makeNSGetOrderByProductIDEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSGetOrderByProductIdRequest)
-		order, err := svc.GetOrderByProductId(req.ProductId)
-		return NSGetOrderByProductIdResponse{Target: order, Err: err}, err
+		req := request.(NSGetOrderByProductIDRequest)
+		order, err := svc.GetOrderByProductID(req.ProductID)
+		return NSGetOrderByProductIDResponse{Target: order, Err: err}, err
 	}
 }
 
-func MakeNSSellEndpoint(svc Service) endpoint.Endpoint {
+func makeNSSellEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSSellRequest)
 		err := svc.Sell(req.SellInfo)
@@ -99,82 +113,89 @@ func MakeNSSellEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
-func MakeNSStopSellingEndpoint(svc Service) endpoint.Endpoint {
+func makeNSStopSellingEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSOrderIdRequest)
-		err := svc.StopSelling(req.OrderId)
+		req := request.(NSOrderIDRequest)
+		err := svc.StopSelling(req.OrderID)
 		return NSErrorResponse{Err: err}, err
 	}
 }
 
-func MakeNSBuyEndpoint(svc Service) endpoint.Endpoint {
+func makeNSBuyEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSBuyRequest)
-		err := svc.Buy(req.OrderId, req.BuyData)
+		err := svc.Buy(req.OrderID, req.BuyData)
 		return NSErrorResponse{Err: err}, err
 	}
 }
 
-func MakeNSApplyConfirmFromChainEndpoint(svc Service) endpoint.Endpoint {
+func makeNSApplyConfirmFromChainEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSChainRequest)
-		err := svc.ApplyConfirmFromChain(req.ChainId, req.Result)
+		err := svc.ApplyConfirmFromChain(req.ChainID, req.Result)
 		return NSErrorResponse{Err: err}, err
 	}
 }
 
-func MakeNSShipProductEndpoint(svc Service) endpoint.Endpoint {
+func makeNSShipProductEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSExpressRequest)
-		err := svc.ShipProduct(req.OrderId, req.ExpressData)
+		err := svc.ShipProduct(req.OrderID, req.ExpressData)
 		return NSErrorResponse{Err: err}, err
 	}
 }
 
-func MakeNSConfirmOrderEndpoint(svc Service) endpoint.Endpoint {
+func makeNSConfirmOrderEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSOrderIdRequest)
-		err := svc.ConfirmOrder(req.OrderId)
+		req := request.(NSOrderIDRequest)
+		err := svc.ConfirmOrder(req.OrderID)
 		return NSErrorResponse{Err: err}, err
 	}
 }
 
-func MakeNSAskForReturnEndpoint(svc Service) endpoint.Endpoint {
+func makeNSAskForReturnEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSAskForReturnRequest)
-		err := svc.AskForReturn(req.OrderId, req.ReturnData)
+		err := svc.AskForReturn(req.OrderID, req.ReturnData)
 		return NSErrorResponse{Err: err}, err
 	}
 }
 
-func MakeNSAgreeReturnEndpoint(svc Service) endpoint.Endpoint {
+func makeNSAgreeReturnEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSOrderIdRequest)
-		err := svc.AgreeReturn(req.OrderId)
+		req := request.(NSOrderIDRequest)
+		err := svc.AgreeReturn(req.OrderID)
 		return NSErrorResponse{Err: err}, err
 	}
 }
 
-func MakeNSShipReturnEndpoint(svc Service) endpoint.Endpoint {
+func makeNSShipReturnEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSExpressRequest)
-		err := svc.ShipReturn(req.OrderId, req.ExpressData)
+		err := svc.ShipReturn(req.OrderID, req.ExpressData)
 		return NSErrorResponse{Err: err}, err
 	}
 }
 
-func MakeNSConfirmReturnEndpoint(svc Service) endpoint.Endpoint {
+func makeNSConfirmReturnEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSOrderIdRequest)
-		err := svc.ConfirmReturn(req.OrderId)
+		req := request.(NSOrderIDRequest)
+		err := svc.ConfirmReturn(req.OrderID)
 		return NSErrorResponse{Err: err}, err
 	}
 }
 
-func MakeNSApplyCancelFromChainEndpoint(svc Service) endpoint.Endpoint {
+func makeNSApplyCancelFromChainEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSChainRequest)
-		err := svc.ApplyCancelFromChain(req.ChainId, req.Result)
+		err := svc.ApplyCancelFromChain(req.ChainID, req.Result)
 		return NSErrorResponse{Err: err}, err
 	}
+}
+
+func encodeError(ctx context.Context, err error, w http.ResponseWriter) {
+	w.Header().Set("context-type", "application/json,charset=utf8")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"error": err.Error(),
+	})
 }

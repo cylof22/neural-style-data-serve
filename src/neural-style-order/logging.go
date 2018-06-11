@@ -1,13 +1,14 @@
-package OrderService
+package main
 
 import (
 	"time"
+
 	"github.com/go-kit/kit/log"
 )
 
 type orderService struct {
-	logger       log.Logger
-	dataService  Service
+	logger      log.Logger
+	dataService Service
 }
 
 // NewLoggingService returns a new instance of a products logging Service.
@@ -15,7 +16,7 @@ func NewLoggingService(logger log.Logger, s Service) Service {
 	return &orderService{logger, s}
 }
 
-func (svc *orderService) GetOrdersInTransaction() (orders []Order, err error){
+func (svc *orderService) GetOrdersInTransaction() (orders []Order, err error) {
 	defer func(begin time.Time) {
 		svc.logger.Log("method", "GetOrdersInTransaction", "took", time.Since(begin), "err", err)
 	}(time.Now())
@@ -23,7 +24,7 @@ func (svc *orderService) GetOrdersInTransaction() (orders []Order, err error){
 	return svc.dataService.GetOrdersInTransaction()
 }
 
-func (svc *orderService) GetOrders(buyer string) (orders []Order, err error){
+func (svc *orderService) GetOrders(buyer string) (orders []Order, err error) {
 	defer func(begin time.Time) {
 		svc.logger.Log("method", "GetOrders", "buyer", buyer, "took", time.Since(begin), "err", err)
 	}(time.Now())
@@ -39,12 +40,12 @@ func (svc *orderService) GetSellings(seller string) (orders []Order, err error) 
 	return svc.dataService.GetSellings(seller)
 }
 
-func (svc *orderService) GetOrderByProductId(productId string) (order Order, err error) {
+func (svc *orderService) GetOrderByProductID(productID string) (order Order, err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "GetOrderByProductId", "productId", productId, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "GetOrderByProductId", "productId", productID, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.GetOrderByProductId(productId)
+	return svc.dataService.GetOrderByProductID(productID)
 }
 
 func (svc *orderService) Sell(sellInfo Order) (err error) {
@@ -55,82 +56,82 @@ func (svc *orderService) Sell(sellInfo Order) (err error) {
 	return svc.dataService.Sell(sellInfo)
 }
 
-func (svc *orderService) StopSelling(orderId string) (err error) {
+func (svc *orderService) StopSelling(orderID string) (err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "StopSelling", "orderId", orderId, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "StopSelling", "orderId", orderID, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.StopSelling(orderId)
+	return svc.dataService.StopSelling(orderID)
 }
 
-func (svc *orderService) Buy(orderId string, buyInfo BuyInfo) (err error) {
+func (svc *orderService) Buy(orderID string, buyInfo BuyInfo) (err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "Buy", "orderId", orderId, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "Buy", "orderId", orderID, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.Buy(orderId, buyInfo)
+	return svc.dataService.Buy(orderID, buyInfo)
 }
 
-func (svc *orderService) ApplyConfirmFromChain(chainId string, result string) (err error) {
+func (svc *orderService) ApplyConfirmFromChain(chainID string, result string) (err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "ApplyConfirmFromChain", "chainId", chainId, "result", result, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "ApplyConfirmFromChain", "chainId", chainID, "result", result, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.ApplyConfirmFromChain(chainId, result)
+	return svc.dataService.ApplyConfirmFromChain(chainID, result)
 }
 
-func (svc *orderService) ShipProduct(orderId string, express Express) (err error) {
+func (svc *orderService) ShipProduct(orderID string, express Express) (err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "ShipProduct", "orderId", orderId, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "ShipProduct", "orderId", orderID, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.ShipProduct(orderId, express)
+	return svc.dataService.ShipProduct(orderID, express)
 }
 
-func (svc *orderService) ConfirmOrder(orderId string) (err error) {
+func (svc *orderService) ConfirmOrder(orderID string) (err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "ConfirmOrder", "orderId", orderId, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "ConfirmOrder", "orderId", orderID, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.ConfirmOrder(orderId)
+	return svc.dataService.ConfirmOrder(orderID)
 }
 
-func (svc *orderService) AskForReturn(orderId string, returnInfo ReturnInfo) (err error) {
+func (svc *orderService) AskForReturn(orderID string, returnInfo ReturnInfo) (err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "AskForReturn", "orderId", orderId, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "AskForReturn", "orderId", orderID, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.AskForReturn(orderId, returnInfo)
+	return svc.dataService.AskForReturn(orderID, returnInfo)
 }
 
-func (svc *orderService) AgreeReturn(orderId string) (err error) {
+func (svc *orderService) AgreeReturn(orderID string) (err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "AgreeReturn", "orderId", orderId, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "AgreeReturn", "orderId", orderID, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.AgreeReturn(orderId)
+	return svc.dataService.AgreeReturn(orderID)
 }
 
-func (svc *orderService) ShipReturn(orderId string, express Express) (err error) {
+func (svc *orderService) ShipReturn(orderID string, express Express) (err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "ShipReturn", "orderId", orderId, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "ShipReturn", "orderId", orderID, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.ShipReturn(orderId, express)
+	return svc.dataService.ShipReturn(orderID, express)
 }
 
-func (svc *orderService) ConfirmReturn(orderId string) (err error) {
+func (svc *orderService) ConfirmReturn(orderID string) (err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "ConfirmReturn", "orderId", orderId, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "ConfirmReturn", "orderId", orderID, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.ConfirmReturn(orderId)
+	return svc.dataService.ConfirmReturn(orderID)
 }
 
-func (svc *orderService) ApplyCancelFromChain(chainId string, result string) (err error) {
+func (svc *orderService) ApplyCancelFromChain(chainID string, result string) (err error) {
 	defer func(begin time.Time) {
-		svc.logger.Log("method", "ApplyCancelFromChain", "chainId", chainId, "result", result, "took", time.Since(begin), "err", err)
+		svc.logger.Log("method", "ApplyCancelFromChain", "chainId", chainID, "result", result, "took", time.Since(begin), "err", err)
 	}(time.Now())
 
-	return svc.dataService.ApplyCancelFromChain(chainId, result)
+	return svc.dataService.ApplyCancelFromChain(chainID, result)
 }
