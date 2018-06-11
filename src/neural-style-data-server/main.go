@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/rs/cors"
 	mgo "gopkg.in/mgo.v2"
 )
 
@@ -30,13 +31,12 @@ var (
 	networkPath             = flag.String("network", "", "neural network model path")
 	previewNetworkPath      = flag.String("previewNetwork", "", "neural network preview model path")
 	outputPath              = flag.String("outputdir", "./", "neural style transfer output directory")
-	productsRouter          = flag.String("productsRouter", "/api/products", "URL router for products")
 )
 
 func ensureIndex(s *mgo.Session) {
 	session := s.Copy()
 	defer session.Close()
-	
+
 	products := session.DB("store").C("products")
 
 	index := mgo.Index{
@@ -105,6 +105,8 @@ func main() {
 	}
 
 	r := makeHTTPHandler(ctx, session, logger)
+
+	r = cors.Default().Handler(r)
 
 	// HTTP transport
 	go func() {
