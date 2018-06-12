@@ -26,6 +26,7 @@ type TokenSaleInfo struct {
 	Mail       string `json:"mail"`
 	Phone      string `json:"phone"`
 	Name       string `json:"name"`
+	Profession string `json:"profession"`
 }
 
 func (svc *TokenSaleService) ServeHTTP(res http.ResponseWriter, req *http.Request) {
