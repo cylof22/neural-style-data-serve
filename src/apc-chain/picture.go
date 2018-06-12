@@ -108,6 +108,7 @@ func (svc *PictureService) ServeHTTP(res http.ResponseWriter, req *http.Request)
 		}
 
 		res.WriteHeader(http.StatusOK)
+		return
 	}
 
 	res.WriteHeader(http.StatusForbidden)
