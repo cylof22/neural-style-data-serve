@@ -52,6 +52,9 @@ func main() {
 	tokensvc := NewTokenPreSale(session)
 	http.Handle("/token", tokensvc)
 
+	picturesvc := NewPictureService(session)
+	http.Handle("/picture", picturesvc)
+
 	err = http.ListenAndServe(*serverURL+":"+*serverPort, nil)
 	if err != nil {
 		fmt.Println(err)
