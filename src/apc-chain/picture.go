@@ -65,10 +65,13 @@ func (svc *PictureService) uploadPicture(owner, picData, picID string) (string, 
 	outfileName := owner + "_" + picID + "." + imgFormat
 	outfilePath := path.Join("./data", outfileName)
 
-	outputFile, _ := os.Create(outfilePath)
-	defer outputFile.Close()
+	if *local {
+		outputFile, _ := os.Create(outfilePath)
+		defer outputFile.Close()
 
-	outputFile.Write(baseData)
+		outputFile.Write(baseData)
+	}
+
 	return outfileName, nil
 }
 

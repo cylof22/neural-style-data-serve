@@ -13,6 +13,7 @@ var (
 	serverPort   = flag.String("port", "8000", "neural style server port")
 	dbServerURL  = flag.String("dbserver", "0.0.0.0", "style products server url")
 	dbServerPort = flag.String("dbport", "9000", "style products port url")
+	local        = flag.Bool("debug", false, "flag for store local file")
 )
 
 func ensureIndex(s *mgo.Session) {
