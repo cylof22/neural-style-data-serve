@@ -18,9 +18,9 @@ import (
 
 	"github.com/go-kit/kit/log/level"
 
+	"neural-style-chain"
 	"neural-style-image-watermark"
 	"neural-style-util"
-	"neural-style-chain"
 
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/go-kit/kit/log"
@@ -120,12 +120,13 @@ type Service interface {
 	GetProductsByTags(tag []string) ([]Product, error)
 	GetProductsByID(id string) (Product, error)
 	GetReviewsByProductID(id string) ([]Review, error)
+	AddReviewByProductID(review Review) error
 	GetArtists() ([]Artist, error)
 	GetHotestArtists() ([]Artist, error)
 	GetImage(userID, imageID string) ([]byte, string, error)
-	DeleteProduct(productID string) (error)
-	UpdateProduct(productID string, productData UploadProduct) (error)
-	UpdateProductAfterTransaction(productId string, newOwner string, newPrice string) (error)
+	DeleteProduct(productID string) error
+	UpdateProduct(productID string, productData UploadProduct) error
+	UpdateProductAfterTransaction(productId string, newOwner string, newPrice string) error
 	Search(keyvals map[string]interface{}) ([]Product, error)
 }
 
@@ -589,6 +590,19 @@ func (svc *ProductService) GetReviewsByProductID(id string) ([]Review, error) {
 
 	level.Debug(svc.Logger).Log("API", "GetReviewsByProductID", "info", "get reviews by id ok", "id", id)
 	return nil, nil
+}
+
+// AddReviewByProductID add review data to the product id
+func (svc *ProductService) AddReviewByProductID(review Review) error {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("reviews")
+
+	err := c.Insert(review)
+
+	level.Debug(svc.Logger).Log("API", "AddReviewByProductID", "user", review.User, "id", review.ProductID, "comments", review.Comment)
+	return err
 }
 
 // GetArtists return all the available artists
