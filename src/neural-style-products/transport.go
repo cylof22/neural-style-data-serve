@@ -136,13 +136,13 @@ func decodeAddReviewByIDRequest(_ context.Context, r *http.Request) (interface{}
 }
 
 func encodeAddReviewByIDResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-	reviewsRes := response.(NSGetReviewsByIDResponse)
+	reviewsRes := response.(NSAddReviewByIDResponse)
 	if reviewsRes.Err != nil {
 		return reviewsRes.Err
 	}
 
 	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(reviewsRes.Reviews)
+	return json.NewEncoder(w).Encode(reviewsRes.Err)
 }
 
 func decodeNSCacheGetRequest(_ context.Context, r *http.Request) (interface{}, error) {
