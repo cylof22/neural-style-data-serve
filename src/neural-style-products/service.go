@@ -577,7 +577,7 @@ func (svc *ProductService) GetReviewsByProductID(id string) ([]Review, error) {
 	c := session.DB("store").C("reviews")
 
 	var reviews []Review
-	err := c.Find(bson.M{"productId": id}).All(&reviews)
+	err := c.Find(bson.M{"productid": id}).All(&reviews)
 	if err != nil {
 		// Add log information here
 		level.Debug(svc.Logger).Log("API", "GetReviewsByProductID", "info", err.Error(), "id", id)
@@ -600,6 +600,10 @@ func (svc *ProductService) AddReviewByProductID(review Review) error {
 	c := session.DB("store").C("reviews")
 
 	err := c.Insert(review)
+
+	if err != nil {
+		level.Debug(svc.Logger).Log("API", "GetReviewsByProductID", "info", err.Error())
+	}
 
 	level.Debug(svc.Logger).Log("API", "AddReviewByProductID", "user", review.User, "id", review.ProductID, "comments", review.Comment)
 	return err
