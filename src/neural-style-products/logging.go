@@ -78,24 +78,6 @@ func (svc *loggingService) GetProductsByID(id string) (prod Product, err error) 
 	return svc.dataService.GetProductsByID(id)
 }
 
-func (svc *loggingService) GetReviewsByProductID(id string) (reviews []Review, err error) {
-	defer func(begin time.Time) {
-		level.Debug(svc.logger).Log("method", "GetReviewsByProductID", "id", id,
-			"took", time.Since(begin), "err", err)
-	}(time.Now())
-
-	return svc.dataService.GetReviewsByProductID(id)
-}
-
-func (svc *loggingService) AddReviewByProductID(review Review) (err error) {
-	defer func(begin time.Time) {
-		level.Debug(svc.logger).Log("method", "AddReviewByProductID", "user", review.User,
-			"took", time.Since(begin), "err", err)
-	}(time.Now())
-
-	return svc.dataService.AddReviewByProductID(review)
-}
-
 func (svc *loggingService) GetArtists() (artists []Artist, err error) {
 	defer func(begin time.Time) {
 		level.Debug(svc.logger).Log("method", "GetArtists", "took", time.Since(begin), "err", err)

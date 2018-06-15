@@ -108,43 +108,6 @@ func encodeNSGetProductByIDResponse(ctx context.Context, w http.ResponseWriter, 
 	return json.NewEncoder(w).Encode(productRes.Target)
 }
 
-func decodeNSGetReviewsByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	return NSGetReviewsByIDRequest{ID: id}, nil
-}
-
-func encodeNSGetReviewsByIDResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	reviewsRes := response.(NSGetReviewsByIDResponse)
-	if reviewsRes.Err != nil {
-		return reviewsRes.Err
-	}
-
-	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(reviewsRes.Reviews)
-}
-
-func decodeAddReviewByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	review := Review{}
-	err := json.NewDecoder(r.Body).Decode(&review)
-
-	return NSAddReviewByIDRequest{ID: id, Data: review}, err
-}
-
-func encodeAddReviewByIDResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-	reviewsRes := response.(NSAddReviewByIDResponse)
-	if reviewsRes.Err != nil {
-		return reviewsRes.Err
-	}
-
-	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(reviewsRes.Err)
-}
-
 func decodeNSCacheGetRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	userID := vars["usrid"]
@@ -368,21 +331,6 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	))
 
-	// GET api/products/{id}/reviews
-	r.Methods("GET").Path("/api/products/{id}/reviews").Handler(httptransport.NewServer(
-		auth(MakeNSGetReviewsByIDEndpoint(svc)),
-		decodeNSGetReviewsByIDRequest,
-		encodeNSGetReviewsByIDResponse,
-		options...,
-	))
-
-	// POST api/products/{id}/reviews/add
-	r.Methods("POST").Path("/api/products/{id}/reviews/add").Handler(httptransport.NewServer(
-		MakeNSAddReviewByIDEndpoint(svc),
-		decodeAddReviewByIDRequest,
-		encodeAddReviewByIDResponse,
-		options...,
-	))
 	r.Methods("GET").Path("/api/v1/cache/get/{usrid}/{imgid}").Handler(
 		httptransport.NewServer(
 			MakeNSImageCacheGetEndpoint(svc),

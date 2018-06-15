@@ -44,28 +44,6 @@ type NSUploadProductsResponse struct {
 	Err    error
 }
 
-// NSGetReviewsByIDRequest define the parameters for get reviews
-type NSGetReviewsByIDRequest struct {
-	ID string
-}
-
-// NSGetReviewsByIDResponse output the selected reviews
-type NSGetReviewsByIDResponse struct {
-	Reviews []Review
-	Err     error
-}
-
-// NSAddReviewByIDRequest define the product id and review data
-type NSAddReviewByIDRequest struct {
-	ID   string
-	Data Review
-}
-
-// NSAddReviewByIDResponse output the internal error information
-type NSAddReviewByIDResponse struct {
-	Err error
-}
-
 // NSGetArtistsResponse return supported artists
 type NSGetArtistsResponse struct {
 	Artists []Artist
@@ -190,24 +168,6 @@ func MakeNSGetProductByIDEndpoint(svc Service) endpoint.Endpoint {
 		req := request.(NSGetProductByIDRequest)
 		prod, err := svc.GetProductsByID(req.ID)
 		return NSGetProductResponse{Target: prod, Err: err}, err
-	}
-}
-
-// MakeNSGetReviewsByIDEndpoint get the selected reviews by id
-func MakeNSGetReviewsByIDEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSGetReviewsByIDRequest)
-		reviews, err := svc.GetReviewsByProductID(req.ID)
-		return NSGetReviewsByIDResponse{Reviews: reviews, Err: err}, err
-	}
-}
-
-// MakeNSAddReviewByIDEndpoint add the reviews for selected product id
-func MakeNSAddReviewByIDEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSAddReviewByIDRequest)
-		err := svc.AddReviewByProductID(req.Data)
-		return NSAddReviewByIDResponse{Err: err}, err
 	}
 }
 
