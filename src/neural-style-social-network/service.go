@@ -19,10 +19,19 @@ type Review struct {
 	Comment   string `json:"comment"`
 }
 
+// Followee product followee information
+type Followee struct {
+	ProductID string `json:"productid"`
+	UserID    string `json:"useid"`
+	Name      string `json:"name"`
+}
+
 // Service define basic service interface for social network
 type Service interface {
 	GetReviewsByProductID(id string) ([]Review, error)
 	AddReviewByProductID(review Review) error
+	GetFolloweesByProductID(id string) ([]Followee, error)
+	AddFolloweesByProductID(use Followee) error
 }
 
 // SocialService define implementation of the social service
@@ -69,9 +78,47 @@ func (svc *SocialService) AddReviewByProductID(review Review) error {
 	err := c.Insert(review)
 
 	if err != nil {
-		level.Debug(svc.Logger).Log("API", "GetReviewsByProductID", "info", err.Error())
+		level.Error(svc.Logger).Log("API", "GetReviewsByProductID", "info", err.Error())
 	}
 
 	level.Debug(svc.Logger).Log("API", "AddReviewByProductID", "user", review.User, "id", review.ProductID, "comments", review.Comment)
 	return err
+}
+
+// GetFolloweesByProductID get all the followees for a given product id
+func (svc *SocialService) GetFolloweesByProductID(id string) ([]Followee, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("followees")
+
+	var followees []Followee
+	err := c.Find(bson.M{"productid": id}).All(&followees)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "GetFolloweesByProductID", "productid", id, "info", err.Error())
+	}
+
+	if len(followees) != 0 {
+		return followees, nil
+	}
+
+	level.Debug(svc.Logger).Log("API", "GetFolloweesByProductID", "productid", id, "size", len(followees))
+	return followees, nil
+}
+
+// AddFolloweesByProductID add new followees to a given product id
+func (svc *SocialService) AddFolloweesByProductID(info Followee) error {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("followees")
+
+	err := c.Insert(info)
+
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.Name, "productid", info.ProductID, "info", err.Error())
+	}
+
+	level.Debug(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.UserID, "id", info.ProductID)
+	return nil
 }

@@ -33,3 +33,22 @@ func (svc *loggingService) AddReviewByProductID(review Review) (err error) {
 
 	return svc.socialService.AddReviewByProductID(review)
 }
+
+func (svc *loggingService) GetFolloweesByProductID(id string) (followees []Followee, err error) {
+	defer func(begin time.Time) {
+		level.Debug(svc.logger).Log("method", "GetFolloweesByProductID", "productid", id, "took",
+			time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.socialService.GetFolloweesByProductID(id)
+}
+
+func (svc *loggingService) AddFolloweesByProductID(user Followee) (err error) {
+	defer func(begin time.Time) {
+		level.Debug(svc.logger).Log("method", "AddFolloweesByProductID", "productid", user.Name, "user", user.Name,
+			"took", time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.socialService.AddFolloweesByProductID(user)
+
+}
