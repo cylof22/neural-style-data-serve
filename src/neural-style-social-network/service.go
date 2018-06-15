@@ -22,8 +22,9 @@ type Review struct {
 // Followee product followee information
 type Followee struct {
 	ProductID string `json:"productid"`
-	UserID    string `json:"useid"`
+	UserID    string `json:"userid"`
 	Name      string `json:"name"`
+	Timestamp string `json:"timestamp"`
 }
 
 // Service define basic service interface for social network
@@ -32,6 +33,7 @@ type Service interface {
 	AddReviewByProductID(review Review) error
 	GetFolloweesByProductID(id string) ([]Followee, error)
 	AddFolloweesByProductID(use Followee) error
+	DeleteFolloweeByID(productID, UserID string) error
 }
 
 // SocialService define implementation of the social service
@@ -121,4 +123,21 @@ func (svc *SocialService) AddFolloweesByProductID(info Followee) error {
 
 	level.Debug(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.UserID, "id", info.ProductID)
 	return nil
+}
+
+// DeleteFolloweeByID remove the followee information for a given product id
+func (svc *SocialService) DeleteFolloweeByID(productID, UserID string) error {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("followees")
+
+	err := c.Remove(bson.M{"productid": productID, "userid": UserID})
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "DeleteFolloweeByIDProductID", "productid", productID, "userid", UserID, "info", err.Error())
+		return err
+	}
+
+	level.Debug(svc.Logger).Log("API", "DeleteFolloweeByIDProductID", "productid", productID, "userid", UserID)
+	return err
 }

@@ -45,10 +45,18 @@ func (svc *loggingService) GetFolloweesByProductID(id string) (followees []Follo
 
 func (svc *loggingService) AddFolloweesByProductID(user Followee) (err error) {
 	defer func(begin time.Time) {
-		level.Debug(svc.logger).Log("method", "AddFolloweesByProductID", "productid", user.Name, "user", user.Name,
+		level.Debug(svc.logger).Log("method", "AddFolloweesByProductID", "productid", user.ProductID, "user", user.Name,
 			"took", time.Since(begin), "err", err)
 	}(time.Now())
 
 	return svc.socialService.AddFolloweesByProductID(user)
+}
 
+func (svc *loggingService) DeleteFolloweeByID(productID, UserID string) (err error) {
+	defer func(begin time.Time) {
+		level.Debug(svc.logger).Log("method", "DeleteFolloweeByProductID", "productid", productID, "userid", UserID,
+			"took", time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.socialService.DeleteFolloweeByID(productID, UserID)
 }

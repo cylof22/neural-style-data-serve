@@ -25,11 +25,6 @@ type NSAddReviewByIDRequest struct {
 	Data Review
 }
 
-// NSAddReviewByIDResponse output the internal error information
-type NSAddReviewByIDResponse struct {
-	Err error
-}
-
 // NSGetFolloweesByIDRequest define the parameters for get reviews
 type NSGetFolloweesByIDRequest struct {
 	ID string
@@ -47,8 +42,14 @@ type NSAddFolloweeByIDRequest struct {
 	Data Followee
 }
 
-// NSAddFolloweeByIDResponse output the internal error information
-type NSAddFolloweeByIDResponse struct {
+// NSDeleteFolloweebyIDRequest define the product id and the user id
+type NSDeleteFolloweebyIDRequest struct {
+	ProductID string
+	UserID    string
+}
+
+// NSSocialErrorResponse define the general error response
+type NSSocialErrorResponse struct {
 	Err error
 }
 
@@ -71,7 +72,7 @@ func makeNSAddReviewByIDEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSAddReviewByIDRequest)
 		err := svc.AddReviewByProductID(req.Data)
-		return NSAddReviewByIDResponse{Err: err}, err
+		return NSSocialErrorResponse{Err: err}, err
 	}
 }
 
@@ -87,6 +88,14 @@ func makeNSAddFolloweebyIDEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(NSAddFolloweeByIDRequest)
 		err := svc.AddFolloweesByProductID(req.Data)
-		return NSAddFolloweeByIDResponse{Err: err}, err
+		return NSSocialErrorResponse{Err: err}, err
+	}
+}
+
+func makeNSDeleteFolloweeByIDEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSDeleteFolloweebyIDRequest)
+		err := svc.DeleteFolloweeByID(req.ProductID, req.UserID)
+		return NSSocialErrorResponse{Err: err}, err
 	}
 }

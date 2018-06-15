@@ -40,31 +40,21 @@ func decodeAddReviewByIDRequest(_ context.Context, r *http.Request) (interface{}
 	return NSAddReviewByIDRequest{ID: id, Data: review}, err
 }
 
-func encodeAddReviewByIDResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-	reviewsRes := response.(NSAddReviewByIDResponse)
-	if reviewsRes.Err != nil {
-		return reviewsRes.Err
-	}
-
-	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(reviewsRes.Err)
-}
-
 func decodeNSGetFolloweesByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	return NSGetReviewsByIDRequest{ID: id}, nil
+	return NSGetFolloweesByIDRequest{ID: id}, nil
 }
 
 func encodeNSGetFolloweesByIDResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	reviewsRes := response.(NSGetReviewsByIDResponse)
-	if reviewsRes.Err != nil {
-		return reviewsRes.Err
+	followeesRes := response.(NSGetFolloweesByIDResponse)
+	if followeesRes.Err != nil {
+		return followeesRes.Err
 	}
 
 	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(reviewsRes.Reviews)
+	return json.NewEncoder(w).Encode(followeesRes.Followees)
 }
 
 func decodeAddFolloweeByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -73,18 +63,26 @@ func decodeAddFolloweeByIDRequest(_ context.Context, r *http.Request) (interface
 
 	followee := Followee{}
 	err := json.NewDecoder(r.Body).Decode(&followee)
-
 	return NSAddFolloweeByIDRequest{ID: id, Data: followee}, err
 }
 
-func encodeAddFolloweeByIDResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-	followsRes := response.(NSAddFolloweeByIDResponse)
+func encodeSocialResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	followsRes := response.(NSSocialErrorResponse)
 	if followsRes.Err != nil {
 		return followsRes.Err
 	}
 
 	w.Header().Set("context-type", "application/json, charset=utf8")
 	return json.NewEncoder(w).Encode(followsRes.Err)
+}
+
+func decodeDeleteFolloweeByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	// Check the exists of the variables
+	productID := vars["productid"]
+	userID := vars["userid"]
+
+	return NSDeleteFolloweebyIDRequest{ProductID: productID, UserID: userID}, nil
 }
 
 func makeHTTPHandler(context context.Context, session *mgo.Session, logger log.Logger) http.Handler {
@@ -110,24 +108,33 @@ func makeHTTPHandler(context context.Context, session *mgo.Session, logger log.L
 	r.Methods("POST").Path("/api/social/v1/{id}/reviews/add").Handler(httptransport.NewServer(
 		makeNSAddReviewByIDEndpoint(svc),
 		decodeAddReviewByIDRequest,
-		encodeAddReviewByIDResponse,
+		encodeSocialResponse,
 		options...,
 	))
 
 	// Get api/social/v1/{id}/followees
 	r.Methods("GET").Path("/api/social/v1/{id}/followees").Handler(httptransport.NewServer(
 		makeNSGetFolloweesByIDEndpoint(svc),
-		decodeNSGetReviewsByIDRequest,
+		decodeNSGetFolloweesByIDRequest,
 		encodeNSGetFolloweesByIDResponse,
 		options...,
 	))
 
 	// POST api/social/v1/{id}/followees/add
-	r.Methods("POST").Path("/api/social/v1/{id}/followees").Handler(httptransport.NewServer(
+	r.Methods("POST").Path("/api/social/v1/{id}/followees/add").Handler(httptransport.NewServer(
 		makeNSAddFolloweebyIDEndpoint(svc),
 		decodeAddFolloweeByIDRequest,
-		encodeAddFolloweeByIDResponse,
+		encodeSocialResponse,
 		options...,
 	))
+
+	// DELETE api/social/v1/{productid}/{userid}/followees/delete
+	r.Methods("DELETE").Path("/api/social/v1/{productid}/{userid}/followees/delete").Handler(httptransport.NewServer(
+		makeNSDeleteFolloweeByIDEndpoint(svc),
+		decodeDeleteFolloweeByIDRequest,
+		encodeSocialResponse,
+		options...,
+	))
+
 	return r
 }
