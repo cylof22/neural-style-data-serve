@@ -60,3 +60,12 @@ func (svc *loggingService) DeleteFolloweeByID(productID, UserID string) (err err
 
 	return svc.socialService.DeleteFolloweeByID(productID, UserID)
 }
+
+func (svc *loggingService) GetSummaryByID(productID string) (summary SocialSummary, err error) {
+	defer func(begin time.Time) {
+		level.Debug(svc.logger).Log("method", "GetSummaryByID", "productid", productID,
+			"took", time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.socialService.GetSummaryByID(productID)
+}

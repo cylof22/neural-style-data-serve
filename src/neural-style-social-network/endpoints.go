@@ -53,6 +53,17 @@ type NSSocialErrorResponse struct {
 	Err error
 }
 
+// NSGetSummaryByIDRequest define the product id for summary information
+type NSGetSummaryByIDRequest struct {
+	ProductID string
+}
+
+// NSGetSummaryByIDResponse define the summary information
+type NSGetSummaryByIDResponse struct {
+	Summary SocialSummary
+	Err     error
+}
+
 func encodeError(ctx context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("context-type", "application/json,charset=utf8")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -97,5 +108,13 @@ func makeNSDeleteFolloweeByIDEndpoint(svc Service) endpoint.Endpoint {
 		req := request.(NSDeleteFolloweebyIDRequest)
 		err := svc.DeleteFolloweeByID(req.ProductID, req.UserID)
 		return NSSocialErrorResponse{Err: err}, err
+	}
+}
+
+func makeNSGetSummaryByIDEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSGetSummaryByIDRequest)
+		summary, err := svc.GetSummaryByID(req.ProductID)
+		return NSGetSummaryByIDResponse{Summary: summary, Err: err}, err
 	}
 }

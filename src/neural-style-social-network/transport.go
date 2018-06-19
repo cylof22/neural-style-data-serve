@@ -85,6 +85,24 @@ func decodeDeleteFolloweeByIDRequest(_ context.Context, r *http.Request) (interf
 	return NSDeleteFolloweebyIDRequest{ProductID: productID, UserID: userID}, nil
 }
 
+func decodeGetSummaryByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+
+	productID := vars["productid"]
+
+	return NSGetSummaryByIDRequest{ProductID: productID}, nil
+}
+
+func encodeGetSummaryByIDResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	summaryResponse := response.(NSGetSummaryByIDResponse)
+	if summaryResponse.Err != nil {
+		return summaryResponse.Err
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(summaryResponse.Summary)
+}
+
 func makeHTTPHandler(context context.Context, session *mgo.Session, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 	options := []httptransport.ServerOption{
@@ -136,5 +154,12 @@ func makeHTTPHandler(context context.Context, session *mgo.Session, logger log.L
 		options...,
 	))
 
+	// GET api/social/v1/{id}/summary
+	r.Methods("GET").Path("/api/social/v1/{productid}/summary").Handler(httptransport.NewServer(
+		makeNSGetSummaryByIDEndpoint(svc),
+		decodeGetSummaryByIDRequest,
+		encodeGetSummaryByIDResponse,
+		options...,
+	))
 	return r
 }

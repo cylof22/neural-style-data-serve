@@ -27,8 +27,16 @@ type Followee struct {
 	Timestamp string `json:"timestamp"`
 }
 
+// SocialSummary define the basic social information for the home page
+type SocialSummary struct {
+	FolloweeCount uint32 `json:"followeeCount"`
+	StarRated     uint32 `json:"starRated"`
+	CommentCount  uint32 `json:"commentCount"`
+}
+
 // Service define basic service interface for social network
 type Service interface {
+	GetSummaryByID(id string) (SocialSummary, error)
 	GetReviewsByProductID(id string) ([]Review, error)
 	AddReviewByProductID(review Review) error
 	GetFolloweesByProductID(id string) ([]Followee, error)
@@ -140,4 +148,45 @@ func (svc *SocialService) DeleteFolloweeByID(productID, UserID string) error {
 
 	level.Debug(svc.Logger).Log("API", "DeleteFolloweeByIDProductID", "productid", productID, "userid", UserID)
 	return err
+}
+
+// GetSummaryByID aggregate the summary information from the 'reviews' and 'followees' collection
+func (svc *SocialService) GetSummaryByID(id string) (SocialSummary, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	info := SocialSummary{}
+
+	c := session.DB("store").C("followees")
+	count, err := c.Find(bson.M{"productid": id}).Count()
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "GetSummaryByID", "productid", id, "info", "GetFollowees", "error", err.Error())
+		return info, err
+	}
+	info.FolloweeCount = uint32(count)
+
+	c = session.DB("store").C("reviews")
+	var ratings []struct {
+		Rating uint8 `json:"rating"`
+	}
+
+	err = c.Find(bson.M{"productid": id}).Select(bson.M{"rating": 1}).All(&ratings)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "GetSummaryByID", "productid", id, "info", "GetReviews", "error", err.Error())
+		return info, err
+	}
+	info.CommentCount = uint32(len(ratings))
+
+	totalRating := 0
+	for _, ratingInfo := range ratings {
+		totalRating += int(ratingInfo.Rating)
+	}
+
+	info.StarRated = 0
+	if info.CommentCount != 0 {
+		info.StarRated = uint32(totalRating) / info.CommentCount
+	}
+
+	level.Info(svc.Logger).Log("API", "GetSummaryByID", "productid", id, "followees", info.FolloweeCount, "comments", info.CommentCount, "rating", info.StarRated)
+	return info, nil
 }
