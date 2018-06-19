@@ -36,7 +36,7 @@ var (
 func ensureIndex(s *mgo.Session) {
 	session := s.Copy()
 	defer session.Close()
-	
+
 	products := session.DB("store").C("products")
 
 	index := mgo.Index{
@@ -47,21 +47,6 @@ func ensureIndex(s *mgo.Session) {
 		Sparse:     true,
 	}
 	err := products.EnsureIndex(index)
-	if err != nil {
-		panic(err)
-	}
-
-	reviews := session.DB("store").C("reviews")
-
-	index = mgo.Index{
-		Key:        []string{"productId"},
-		Unique:     true,
-		DropDups:   true,
-		Background: true,
-		Sparse:     true,
-	}
-
-	err = reviews.EnsureIndex(index)
 	if err != nil {
 		panic(err)
 	}
