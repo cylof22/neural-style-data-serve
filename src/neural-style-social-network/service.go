@@ -85,10 +85,18 @@ func (svc *SocialService) AddReviewByProductID(review Review) error {
 
 	c := session.DB("store").C("reviews")
 
-	existQuery := c.Find(bson.M{"productid": review.ProductID, "userid": review.User}).Limit(1)
+	existQuery := c.Find(bson.M{"productid": review.ProductID, "user": review.User}).Limit(1)
 	if existQuery != nil {
-		level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", review.User, "productid", review.ProductID, "info", "Duplicated review")
-		return errors.New("Duplicated user: " + review.User + " for " + review.ProductID)
+		reviewCount, err := existQuery.Count()
+		if err != nil {
+			level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", review.User, "productid", review.ProductID, "info", err.Error())
+			return err
+		}
+
+		if reviewCount != 0 {
+			level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", review.User, "productid", review.ProductID, "info", "Duplicated review")
+			return errors.New("Duplicated user: " + review.User + " for " + review.ProductID)
+		}
 	}
 	err := c.Insert(review)
 
@@ -131,8 +139,16 @@ func (svc *SocialService) AddFolloweesByProductID(info Followee) error {
 
 	existQuery := c.Find(bson.M{"productid": info.ProductID, "userid": info.UserID}).Limit(1)
 	if existQuery != nil {
-		level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.Name, "productid", info.ProductID, "info", "Duplicated followee")
-		return errors.New("Duplicated user: " + info.Name + " for " + info.ProductID)
+		followwCount, err := existQuery.Count()
+		if err != nil {
+			level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.Name, "productid", info.ProductID, "info", err.Error())
+			return err
+		}
+
+		if followwCount != 0 {
+			level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.Name, "productid", info.ProductID, "info", "Duplicated followee")
+			return errors.New("Duplicated user: " + info.Name + " for " + info.ProductID)
+		}
 	}
 
 	err := c.Insert(info)
