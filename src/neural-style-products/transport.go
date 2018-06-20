@@ -108,23 +108,6 @@ func encodeNSGetProductByIDResponse(ctx context.Context, w http.ResponseWriter, 
 	return json.NewEncoder(w).Encode(productRes.Target)
 }
 
-func decodeNSGetReviewsByIDRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	return NSGetReviewsByIDRequest{ID: id}, nil
-}
-
-func encodeNSGetReviewsByIDResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	reviewsRes := response.(NSGetReviewsByIDResponse)
-	if reviewsRes.Err != nil {
-		return reviewsRes.Err
-	}
-
-	w.Header().Set("context-type", "application/json, charset=utf8")
-	return json.NewEncoder(w).Encode(reviewsRes.Reviews)
-}
-
 func decodeNSCacheGetRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	userID := vars["usrid"]
@@ -345,14 +328,6 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		MakeNSSearch(svc),
 		decodeNSSearchRequest,
 		encodeNSSearchRespones,
-		options...,
-	))
-
-	// GET api/products/{id}/reviews
-	r.Methods("GET").Path("/api/products/{id}/reviews").Handler(httptransport.NewServer(
-		auth(MakeNSGetReviewsByIDEndpoint(svc)),
-		decodeNSGetReviewsByIDRequest,
-		encodeNSGetReviewsByIDResponse,
 		options...,
 	))
 

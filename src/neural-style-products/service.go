@@ -18,9 +18,9 @@ import (
 
 	"github.com/go-kit/kit/log/level"
 
+	"neural-style-chain"
 	"neural-style-image-watermark"
 	"neural-style-util"
-	"neural-style-chain"
 
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/go-kit/kit/log"
@@ -92,16 +92,6 @@ type Product struct {
 	ChainId     string       `json:"chainId"`
 }
 
-// Review define the basic elements of the review
-type Review struct {
-	ID        uint32 `json:"id"`
-	ProductID string `json:"productId"`
-	Timestamp string `json:"timestamp"`
-	User      string `json:"user"`
-	Rating    uint8  `json:"rating"`
-	Comment   string `json:"comment"`
-}
-
 // Artist define the basic artist information
 type Artist struct {
 	Name        string `json:"name"`
@@ -119,13 +109,12 @@ type Service interface {
 	GetProductsByUser(userID string) ([]Product, error)
 	GetProductsByTags(tag []string) ([]Product, error)
 	GetProductsByID(id string) (Product, error)
-	GetReviewsByProductID(id string) ([]Review, error)
 	GetArtists() ([]Artist, error)
 	GetHotestArtists() ([]Artist, error)
 	GetImage(userID, imageID string) ([]byte, string, error)
-	DeleteProduct(productID string) (error)
-	UpdateProduct(productID string, productData UploadProduct) (error)
-	UpdateProductAfterTransaction(productId string, newOwner string, newPrice string) (error)
+	DeleteProduct(productID string) error
+	UpdateProduct(productID string, productData UploadProduct) error
+	UpdateProductAfterTransaction(productId string, newOwner string, newPrice string) error
 	Search(keyvals map[string]interface{}) ([]Product, error)
 }
 
@@ -565,30 +554,6 @@ func (svc *ProductService) GetProductsByID(id string) (Product, error) {
 	}
 
 	return product, nil
-}
-
-// GetReviewsByProductID find the
-func (svc *ProductService) GetReviewsByProductID(id string) ([]Review, error) {
-
-	session := svc.Session.Copy()
-	defer session.Close()
-
-	c := session.DB("store").C("reviews")
-
-	var reviews []Review
-	err := c.Find(bson.M{"productId": id}).All(&reviews)
-	if err != nil {
-		// Add log information here
-		level.Debug(svc.Logger).Log("API", "GetReviewsByProductID", "info", err.Error(), "id", id)
-		return reviews, errors.New("Database error")
-	}
-
-	if len(reviews) != 0 {
-		return reviews, nil
-	}
-
-	level.Debug(svc.Logger).Log("API", "GetReviewsByProductID", "info", "get reviews by id ok", "id", id)
-	return nil, nil
 }
 
 // GetArtists return all the available artists
