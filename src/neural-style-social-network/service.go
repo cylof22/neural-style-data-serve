@@ -12,7 +12,7 @@ import (
 // Review define the basic elements of the review
 type Review struct {
 	ID        uint32 `json:"id"`
-	ProductID string `json:"productId"`
+	ProductID string `json:"productid"`
 	Timestamp string `json:"timestamp"`
 	User      string `json:"user"`
 	Rating    uint8  `json:"rating"`
@@ -33,6 +33,12 @@ type SocialSummary struct {
 	CommentCount  uint32 `json:"commentCount"`
 }
 
+// FollowingProduct define the following product info
+type FollowingProduct struct {
+	ID  string `json:"id"`
+	URL string `json:"url"`
+}
+
 // Service define basic service interface for social network
 type Service interface {
 	GetSummaryByID(id string) (SocialSummary, error)
@@ -41,6 +47,7 @@ type Service interface {
 	GetFolloweesByProductID(id string) ([]Followee, error)
 	AddFolloweesByProductID(use Followee) error
 	DeleteFolloweeByID(productID, User string) error
+	GetFollowingProductsByUserID(id string) ([]FollowingProduct, error)
 }
 
 // SocialService define implementation of the social service
@@ -217,4 +224,42 @@ func (svc *SocialService) GetSummaryByID(id string) (SocialSummary, error) {
 
 	level.Info(svc.Logger).Log("API", "GetSummaryByID", "productid", id, "followees", info.FolloweeCount, "comments", info.CommentCount, "rating", info.StarRated)
 	return info, nil
+}
+
+// GetFollowingProductsByUserID get all the following product for a given user name
+func (svc *SocialService) GetFollowingProductsByUserID(user string) ([]FollowingProduct, error) {
+	session := svc.Session.Copy()
+	defer session.Close()
+
+	c := session.DB("store").C("followees")
+
+	var prodIds []struct {
+		ProductID string `json:"productid"`
+	}
+
+	err := c.Find(bson.M{"user": user}).Select(bson.M{"productid": 1}).All(&prodIds)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "GetFollowingProductsByUserID", "user", user, "info", err.Error())
+		return nil, err
+	}
+
+	if len(prodIds) == 0 {
+		return nil, nil
+	}
+
+	var idArray []string
+	for _, info := range prodIds {
+		idArray = append(idArray, info.ProductID)
+	}
+	// aggregate all the following product infor from the products collection
+	var prods []FollowingProduct
+	prodC := session.DB("store").C("products")
+	err = prodC.Find(bson.M{"id": bson.M{"$in": idArray}}).Select(bson.M{"id": 1, "url": 1}).All(&prods)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "GetFollowingProductsByUserID", "user", user, "info", err.Error())
+		return nil, err
+	}
+
+	level.Info(svc.Logger).Log("API", "GetFollowingProductsByUserID", "user", user, "info", len(prods))
+	return prods, nil
 }

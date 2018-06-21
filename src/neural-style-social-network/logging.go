@@ -69,3 +69,12 @@ func (svc *loggingService) GetSummaryByID(productID string) (summary SocialSumma
 
 	return svc.socialService.GetSummaryByID(productID)
 }
+
+func (svc *loggingService) GetFollowingProductsByUserID(user string) (prods []FollowingProduct, err error) {
+	defer func(begin time.Time) {
+		level.Debug(svc.logger).Log("method", "GetFollowingProductsByUserID", "user", user,
+			"took", time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.socialService.GetFollowingProductsByUserID(user)
+}

@@ -103,6 +103,25 @@ func encodeGetSummaryByIDResponse(_ context.Context, w http.ResponseWriter, resp
 	return json.NewEncoder(w).Encode(summaryResponse.Summary)
 }
 
+func decodeGetFolloweeProductsByUserRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+
+	user := vars["user"]
+
+	return NSGetFolloweeProductsByUserRequest{User: user}, nil
+}
+
+func encodeGetFolloweeProductsByUserResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	followeeResponse := response.(NSGetFolloweeProductsByUserResponse)
+
+	if followeeResponse.Err != nil {
+		return followeeResponse.Err
+	}
+
+	w.Header().Set("context-type", "application/json, charset=utf8")
+	return json.NewEncoder(w).Encode(followeeResponse.Prods)
+}
+
 func makeHTTPHandler(context context.Context, session *mgo.Session, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 	options := []httptransport.ServerOption{
@@ -161,5 +180,14 @@ func makeHTTPHandler(context context.Context, session *mgo.Session, logger log.L
 		encodeGetSummaryByIDResponse,
 		options...,
 	))
+
+	// GET api/social/v1/{user}/followees/summary
+	r.Methods("GET").Path("/api/social/v1/{user}/followees/products").Handler(httptransport.NewServer(
+		makeNSGetFolloweeProductsByUserEndpoint(svc),
+		decodeGetFolloweeProductsByUserRequest,
+		encodeGetFolloweeProductsByUserResponse,
+		options...,
+	))
+
 	return r
 }
