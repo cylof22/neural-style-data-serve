@@ -2,6 +2,7 @@ package ProductService
 
 import (
 	"context"
+
 	"github.com/go-kit/kit/endpoint"
 )
 
@@ -41,17 +42,6 @@ type NSGetProductResponse struct {
 type NSUploadProductsResponse struct {
 	Result string
 	Err    error
-}
-
-// NSGetReviewsByIDRequest define the parameters for get reviews
-type NSGetReviewsByIDRequest struct {
-	ID string
-}
-
-// NSGetReviewsByIDResponse output the selected reviews
-type NSGetReviewsByIDResponse struct {
-	Reviews []Review
-	Err     error
 }
 
 // NSGetArtistsResponse return supported artists
@@ -95,9 +85,9 @@ type NSUpdateProductResponse struct {
 }
 
 type NSUpdateProductAfterTransactionRequest struct {
-	ID          string
-	NewOwner    string
-	NewPrice    string
+	ID       string
+	NewOwner string
+	NewPrice string
 }
 
 type NSUpdateProductAfterTransactionResponse struct {
@@ -178,15 +168,6 @@ func MakeNSGetProductByIDEndpoint(svc Service) endpoint.Endpoint {
 		req := request.(NSGetProductByIDRequest)
 		prod, err := svc.GetProductsByID(req.ID)
 		return NSGetProductResponse{Target: prod, Err: err}, err
-	}
-}
-
-// MakeNSGetReviewsByIDEndpoint get the selected reviews by id
-func MakeNSGetReviewsByIDEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(NSGetReviewsByIDRequest)
-		reviews, err := svc.GetReviewsByProductID(req.ID)
-		return NSGetReviewsByIDResponse{Reviews: reviews, Err: err}, err
 	}
 }
 

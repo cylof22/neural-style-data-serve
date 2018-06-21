@@ -1,19 +1,24 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
+	"time"
 
 	mgo "gopkg.in/mgo.v2"
 )
 
 var (
 	serverURL    = flag.String("host", "0.0.0.0", "neural style server url")
-	serverPort   = flag.String("port", "8000", "neural style server port")
-	dbServerURL  = flag.String("dbserver", "0.0.0.0", "style products server url")
-	dbServerPort = flag.String("dbport", "9000", "style products port url")
-	local        = flag.Bool("debug", false, "flag for store local file")
+	serverPort   = flag.String("port", "80", "neural style server port")
+	dbServerURL  = flag.String("dbserver", "apc-chain.documents.azure.com", "Mongodb server host")
+	dbServerPort = flag.String("dbport", "10255", "Mongodb server port")
+	dbUser       = flag.String("dbUser", "", "Mongodb user")
+	dbKey        = flag.String("dbPassword", "", "Mongodb password")
+	local        = flag.Bool("", false, "flag for store local file")
 )
 
 func ensureIndex(s *mgo.Session) {
@@ -36,7 +41,33 @@ func ensureIndex(s *mgo.Session) {
 }
 
 func main() {
-	session, err := mgo.Dial(*dbServerURL + ":" + *dbServerPort)
+	flag.Parse()
+
+	dbAddr := *dbServerURL + ":" + *dbServerPort
+	if *local {
+		dbAddr = "0.0.0.0:9000"
+	}
+
+	dialInfo := &mgo.DialInfo{
+		Addrs:    []string{dbAddr},
+		Timeout:  10 * time.Second,
+		Database: "store",
+	}
+
+	if !(*local) {
+		dialInfo.Username = *dbUser
+		dialInfo.Password = *dbKey
+		dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
+			return tls.Dial("tcp", addr.String(), &tls.Config{})
+		}
+	}
+
+	session, err := mgo.DialWithInfo(dialInfo)
+
+	if err != nil {
+		fmt.Println("Db connection fails: " + err.Error())
+		return
+	}
 
 	defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
@@ -66,4 +97,5 @@ func main() {
 		fmt.Println(err)
 	}
 
+	fmt.Println("APC-chain Server start: ", *serverURL+":"+*serverPort)
 }
