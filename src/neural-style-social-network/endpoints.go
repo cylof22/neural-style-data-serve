@@ -64,6 +64,17 @@ type NSGetSummaryByIDResponse struct {
 	Err     error
 }
 
+// NSGetFolloweeProductsByUserRequest params for get following products
+type NSGetFolloweeProductsByUserRequest struct {
+	User string
+}
+
+// NSGetFolloweeProductsByUserResponse get the following products
+type NSGetFolloweeProductsByUserResponse struct {
+	Prods []FollowingProduct
+	Err   error
+}
+
 func encodeError(ctx context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("context-type", "application/json,charset=utf8")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -116,5 +127,13 @@ func makeNSGetSummaryByIDEndpoint(svc Service) endpoint.Endpoint {
 		req := request.(NSGetSummaryByIDRequest)
 		summary, err := svc.GetSummaryByID(req.ProductID)
 		return NSGetSummaryByIDResponse{Summary: summary, Err: err}, err
+	}
+}
+
+func makeNSGetFolloweeProductsByUserEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(NSGetFolloweeProductsByUserRequest)
+		prods, err := svc.GetFollowingProductsByUserID(req.User)
+		return NSGetFolloweeProductsByUserResponse{Prods: prods, Err: err}, err
 	}
 }

@@ -1,14 +1,14 @@
 package UserService
 
 import (
+	"encoding/base64"
 	"errors"
 	"neural-style-util"
 	"os"
-	"time"
 	"path"
-	"strings"
 	"strconv"
-	"encoding/base64"
+	"strings"
+	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-kit/kit/log/level"
@@ -25,22 +25,24 @@ var (
 
 // UserInfo define the basic user information
 type UserInfo struct {
-	ID                string   `json:"id"`
-	Name              string   `json:"username"`
-	Password          string   `json:"password"`
-	Phone             string   `json:"phone"`
-	Email             string   `json:"email"`
-	Portrait          string   `json:"headPortraitUrl"`
-	ConcernedProducts []string `json:"concernedProducts"`
-	ConcernedUsers    []string `json:"concernedUsers"`
+	ID         string `json:"id"`
+	Address    string `json:"address"`
+	WechatID   string `json:"wechatid"`
+	TelegramID string `json:"telgramid"`
+	Profession uint32 `json:"profession"`
+	Name       string `json:"username"`
+	Password   string `json:"password"`
+	Phone      string `json:"phone"`
+	Email      string `json:"email"`
+	Portrait   string `json:"headPortraitUrl"`
 }
 
 // UserToken define the authorization information
 type UserToken struct {
-	ID    		string `json:"id"`
-	Name  		string `json:"username"`
-	Token 		string `json:"token"`
-	Portrait    string `json:"headPortraitUrl"`
+	ID       string `json:"id"`
+	Name     string `json:"username"`
+	Token    string `json:"token"`
+	Portrait string `json:"headPortraitUrl"`
 }
 
 // Service define the basic login interface
@@ -211,7 +213,7 @@ func (svc *UserService) uploadPicture(picData, picID, picFolder string) (string,
 		err = os.MkdirAll(currentFolder, 0777)
 		if err != nil {
 			return "", err
-		} 
+		}
 	}
 
 	outfileName := picID + "." + imgFormat

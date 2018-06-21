@@ -45,7 +45,7 @@ func (svc *loggingService) GetFolloweesByProductID(id string) (followees []Follo
 
 func (svc *loggingService) AddFolloweesByProductID(user Followee) (err error) {
 	defer func(begin time.Time) {
-		level.Debug(svc.logger).Log("method", "AddFolloweesByProductID", "productid", user.ProductID, "user", user.Name,
+		level.Debug(svc.logger).Log("method", "AddFolloweesByProductID", "productid", user.ProductID, "user", user.User,
 			"took", time.Since(begin), "err", err)
 	}(time.Now())
 
@@ -68,4 +68,13 @@ func (svc *loggingService) GetSummaryByID(productID string) (summary SocialSumma
 	}(time.Now())
 
 	return svc.socialService.GetSummaryByID(productID)
+}
+
+func (svc *loggingService) GetFollowingProductsByUserID(user string) (prods []FollowingProduct, err error) {
+	defer func(begin time.Time) {
+		level.Debug(svc.logger).Log("method", "GetFollowingProductsByUserID", "user", user,
+			"took", time.Since(begin), "err", err)
+	}(time.Now())
+
+	return svc.socialService.GetFollowingProductsByUserID(user)
 }
