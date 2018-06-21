@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"neural-style-products"
@@ -15,6 +16,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -88,6 +90,10 @@ func (svc *PictureService) uploadPicture(owner, picData, picID string) (string, 
 }
 
 func (svc *PictureService) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	defer func(begin time.Time) {
+		fmt.Println("Upload Picture time: ", time.Since(begin))
+	}(time.Now())
+
 	if req.Method != http.MethodPost {
 		res.WriteHeader(http.StatusBadRequest)
 		res.Write([]byte("Unsupported Method"))

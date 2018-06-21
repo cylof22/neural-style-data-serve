@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"time"
 
 	"neural-style-user"
 
@@ -62,6 +64,10 @@ func tokenSale2User(info TokenSaleInfo) UserService.UserInfo {
 }
 
 func (svc *TokenSaleService) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	defer func(begin time.Time) {
+		fmt.Println("Token Presale time: ", time.Since(begin))
+	}(time.Now())
+
 	if req.Method != http.MethodPost {
 		res.WriteHeader(http.StatusBadRequest)
 		res.Write([]byte("Unsupported Method"))
