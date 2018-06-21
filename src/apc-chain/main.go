@@ -39,6 +39,21 @@ func ensureIndex(s *mgo.Session) {
 	if err != nil {
 		panic(err)
 	}
+
+	users := session.DB("store").C("users")
+
+	index = mgo.Index{
+		Key:        []string{"name"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+
+	err = users.EnsureIndex(index)
+	if err != nil {
+		panic(nil)
+	}
 }
 
 func main() {
