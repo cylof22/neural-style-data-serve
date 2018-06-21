@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/md5"
 	"crypto/rand"
 	"encoding/base64"
@@ -9,6 +10,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"neural-style-products"
+	"neural-style-user"
 	"os"
 	"path"
 	"strings"
@@ -46,6 +49,15 @@ func UniqueID() string {
 	h := md5.New()
 	h.Write([]byte(s))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func uploadImage2User(info PictureData) UserService.UserInfo {
+	var user UserService.UserInfo
+	user.Name = info.WechatID
+	user.Address = info.Address
+	user.WechatID = info.WechatID
+
+	return user
 }
 
 func (svc *PictureService) uploadPicture(owner, picData, picID string) (string, error) {
@@ -105,6 +117,40 @@ func (svc *PictureService) ServeHTTP(res http.ResponseWriter, req *http.Request)
 		if err != nil {
 			res.Write([]byte(err.Error()))
 			res.WriteHeader(http.StatusInternalServerError)
+		}
+
+		//conver to user
+		user := uploadImage2User(pictureData)
+
+		c := session.DB("store").C("users")
+		err = c.Insert(user)
+		if err != nil {
+			res.Write([]byte(err.Error()))
+			res.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// upload the picture data to the products storage
+		prodClient := &http.Client{}
+		prodURL := *productSite + "/api/upload/style"
+
+		uploadProd := ProductService.UploadProduct{
+			Owner:   user.Name,
+			PicData: pictureData.PicData,
+		}
+
+		uploadInfo, err := json.Marshal(uploadProd)
+		if err != nil {
+			res.Write([]byte(err.Error()))
+			res.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		_, err = prodClient.Post(prodURL, "application/json", bytes.NewBuffer(uploadInfo))
+		if err != nil {
+			res.Write([]byte(err.Error()))
+			res.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
 		res.WriteHeader(http.StatusOK)

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"neural-style-user"
+
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -23,20 +25,6 @@ const (
 	photographer
 )
 
-// UserInfo define the basic user information
-type UserInfo struct {
-	ID         string `json:"id"`
-	Address    string `json:"address"`
-	WechatID   string `json:"wechatid"`
-	TelegramID string `json:"telgramid"`
-	Profession uint32 `json:"profession"`
-	Name       string `json:"username"`
-	Password   string `json:"password"`
-	Phone      string `json:"phone"`
-	Email      string `json:"email"`
-	Portrait   string `json:"headPortraitUrl"`
-}
-
 // TokenSaleInfo define the basic information of the token sale info
 type TokenSaleInfo struct {
 	Address    string `json:"address"`
@@ -48,14 +36,18 @@ type TokenSaleInfo struct {
 	Profession string `json:"profession"`
 }
 
-func tokenSale2User(info TokenSaleInfo) UserInfo {
-	var user UserInfo
+func tokenSale2User(info TokenSaleInfo) UserService.UserInfo {
+	var user UserService.UserInfo
 	user.Address = info.Address
 	user.WechatID = info.WechatID
 	user.TelegramID = info.TelegramID
 	user.Email = info.Mail
 	user.Phone = info.Phone
 	user.Name = info.Name
+
+	if len(user.Name) == 0 {
+		user.Name = info.Address
+	}
 
 	switch info.Profession {
 	case "0":
