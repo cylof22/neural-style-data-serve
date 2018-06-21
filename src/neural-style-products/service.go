@@ -18,7 +18,6 @@ import (
 
 	"github.com/go-kit/kit/log/level"
 
-	"neural-style-chain"
 	"neural-style-image-watermark"
 	"neural-style-util"
 
