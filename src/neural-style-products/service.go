@@ -241,9 +241,24 @@ func (svc *ProductService) UploadContentFile(productData Product) (Product, erro
 	return newContent, nil
 }
 
+func (svc *ProductService) newImageId(imageData string) (string, error) {
+	newId := NSUtil.GetMd5String(imageData)
+	product, _ := svc.GetProductsByID(newId)
+	if product.ID == newId {
+		return "", errors.New("The product has been uploaded. Please try others.")
+	}
+
+	return newId, nil
+}
+
 // UploadStyleFile upload style file to the cloud storage
 func (svc *ProductService) UploadStyleFile(productData UploadProduct) (Product, error) {
-	imageID := NSUtil.UniqueID()
+	imageID, err := svc.newImageId(productData.PicData)
+	if err != nil {
+		level.Error(svc.Logger).Log("API", "UploadStyleFile", "info", err.Error(), "owner", productData.Owner)
+		return Product{}, err
+	}
+
 	newImageURL, err := svc.uploadPicture(productData.Owner, productData.PicData, imageID, "styles")
 	if err != nil {
 		level.Error(svc.Logger).Log("API", "UploadStyleFile", "info", err.Error(), "owner", productData.Owner)
@@ -326,16 +341,6 @@ func (svc *ProductService) addProduct(product Product) error {
 		}
 		level.Error(svc.Logger).Log("API", "addProduct", "info", "Insert product to database fails", "error", err.Error())
 		return errors.New("Failed to add a new products")
-	}
-
-	productId := product.ID
-	chainId, err := ChainService.UploadProduct(productId)
-	if err != nil {
-		return errors.New("Failed to upload product to chain")
-	}
-	err = c.Update(bson.M{"id": productId}, bson.M{"$set": bson.M{"chainId": chainId}})
-	if err != nil {
-		return errors.New("Failed to update chain id after uploading product")
 	}
 
 	return nil
