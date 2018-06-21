@@ -18,7 +18,7 @@ var (
 	dbServerPort = flag.String("dbport", "10255", "Mongodb server port")
 	dbUser       = flag.String("dbUser", "", "Mongodb user")
 	dbKey        = flag.String("dbPassword", "", "Mongodb password")
-	local        = flag.Bool("", false, "flag for store local file")
+	local        = flag.Bool("local", false, "flag for store local file")
 )
 
 func ensureIndex(s *mgo.Session) {
