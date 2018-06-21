@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"neural-style-user"
+
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -18,6 +20,11 @@ type TokenSaleService struct {
 	Session *mgo.Session
 }
 
+const (
+	artist = iota
+	photographer
+)
+
 // TokenSaleInfo define the basic information of the token sale info
 type TokenSaleInfo struct {
 	Address    string `json:"address"`
@@ -27,6 +34,27 @@ type TokenSaleInfo struct {
 	Phone      string `json:"phone"`
 	Name       string `json:"name"`
 	Profession string `json:"profession"`
+}
+
+func tokenSale2User(info TokenSaleInfo) UserService.UserInfo {
+	var user UserService.UserInfo
+	user.Address = info.Address
+	user.WechatID = info.WechatID
+	user.TelegramID = info.TelegramID
+	user.Email = info.Mail
+	user.Phone = info.Phone
+	user.Name = info.Name
+
+	switch info.Profession {
+	case "0":
+		user.Profession = artist
+	case "1":
+		user.Profession = photographer
+	}
+	// generate unique id
+	user.ID = ""
+
+	return user
 }
 
 func (svc *TokenSaleService) ServeHTTP(res http.ResponseWriter, req *http.Request) {

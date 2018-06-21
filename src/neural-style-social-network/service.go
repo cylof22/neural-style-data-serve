@@ -22,8 +22,7 @@ type Review struct {
 // Followee product followee information
 type Followee struct {
 	ProductID string `json:"productid"`
-	UserID    string `json:"userid"`
-	Name      string `json:"name"`
+	User      string `json:"user"`
 	Timestamp string `json:"timestamp"`
 }
 
@@ -41,7 +40,7 @@ type Service interface {
 	AddReviewByProductID(review Review) error
 	GetFolloweesByProductID(id string) ([]Followee, error)
 	AddFolloweesByProductID(use Followee) error
-	DeleteFolloweeByID(productID, UserID string) error
+	DeleteFolloweeByID(productID, User string) error
 }
 
 // SocialService define implementation of the social service
@@ -137,45 +136,45 @@ func (svc *SocialService) AddFolloweesByProductID(info Followee) error {
 
 	c := session.DB("store").C("followees")
 
-	existQuery := c.Find(bson.M{"productid": info.ProductID, "userid": info.UserID}).Limit(1)
+	existQuery := c.Find(bson.M{"productid": info.ProductID, "user": info.User}).Limit(1)
 	if existQuery != nil {
 		followwCount, err := existQuery.Count()
 		if err != nil {
-			level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.Name, "productid", info.ProductID, "info", err.Error())
+			level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.User, "productid", info.ProductID, "info", err.Error())
 			return err
 		}
 
 		if followwCount != 0 {
-			level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.Name, "productid", info.ProductID, "info", "Duplicated followee")
-			return errors.New("Duplicated user: " + info.Name + " for " + info.ProductID)
+			level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.User, "productid", info.ProductID, "info", "Duplicated followee")
+			return errors.New("Duplicated user: " + info.User + " for " + info.ProductID)
 		}
 	}
 
 	err := c.Insert(info)
 
 	if err != nil {
-		level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.Name, "productid", info.ProductID, "info", err.Error())
+		level.Error(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.User, "productid", info.ProductID, "info", err.Error())
 		return err
 	}
 
-	level.Debug(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.UserID, "id", info.ProductID)
+	level.Debug(svc.Logger).Log("API", "AddFolloweesByProductID", "user", info.User, "id", info.ProductID)
 	return nil
 }
 
 // DeleteFolloweeByID remove the followee information for a given product id
-func (svc *SocialService) DeleteFolloweeByID(productID, UserID string) error {
+func (svc *SocialService) DeleteFolloweeByID(productID, User string) error {
 	session := svc.Session.Copy()
 	defer session.Close()
 
 	c := session.DB("store").C("followees")
 
-	err := c.Remove(bson.M{"productid": productID, "userid": UserID})
+	err := c.Remove(bson.M{"productid": productID, "user": User})
 	if err != nil {
-		level.Error(svc.Logger).Log("API", "DeleteFolloweeByIDProductID", "productid", productID, "userid", UserID, "info", err.Error())
+		level.Error(svc.Logger).Log("API", "DeleteFolloweeByIDProductID", "productid", productID, "user", User, "info", err.Error())
 		return err
 	}
 
-	level.Debug(svc.Logger).Log("API", "DeleteFolloweeByIDProductID", "productid", productID, "userid", UserID)
+	level.Debug(svc.Logger).Log("API", "DeleteFolloweeByIDProductID", "productid", productID, "user", User)
 	return err
 }
 
