@@ -82,6 +82,9 @@ func main() {
 	airdropServer := http.StripPrefix("/ch/airdrop/", homeServer)
 	http.Handle("/ch/airdrop/", airdropServer)
 
+	uploadServer := http.StripPrefix("/ch/upload/", homeServer)
+	http.Handle("/ch/upload/", uploadServer)
+
 	docServer := http.FileServer(http.Dir("documents"))
 	docHandler := http.StripPrefix("/documents/", docServer)
 	http.Handle("/documents/", docHandler)
