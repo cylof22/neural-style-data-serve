@@ -28,9 +28,9 @@ func ensureIndex(s *mgo.Session) {
 	defer session.Close()
 
 	reviews := session.DB("store").C("reviews")
-
+	
 	index := mgo.Index{
-		Key:        []string{"productId"},
+		Key:        []string{"productid"},
 		Unique:     false,
 		DropDups:   true,
 		Background: true,
