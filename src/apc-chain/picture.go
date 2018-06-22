@@ -127,14 +127,31 @@ func (svc *PictureService) ServeHTTP(res http.ResponseWriter, req *http.Request)
 
 		//conver to user
 		user := uploadImage2User(pictureData)
-
-		c := session.DB("store").C("users")
-		err = c.Insert(user)
+		userInfo, err := json.Marshal(user)
 		if err != nil {
 			res.Write([]byte(err.Error()))
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		// register as a user for elforce
+		resp, err := http.Post(*productSite+"/api/v1/register", "application/json", bytes.NewBuffer(userInfo))
+		if err != nil {
+			res.Write([]byte(err.Error()))
+			res.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// login
+		resp, err = http.Post(*productSite+"/api/v1/authenticate", "application/json", bytes.NewBuffer(userInfo))
+		if err != nil {
+			res.Write([]byte(err.Error()))
+			res.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		var token UserService.UserToken
+		err = json.NewDecoder(resp.Body).Decode(&token)
 
 		// upload the picture data to the products storage
 		prodClient := &http.Client{}
@@ -152,7 +169,9 @@ func (svc *PictureService) ServeHTTP(res http.ResponseWriter, req *http.Request)
 			return
 		}
 
-		_, err = prodClient.Post(prodURL, "application/json", bytes.NewBuffer(uploadInfo))
+		uploadReq, err := http.NewRequest("POST", prodURL, bytes.NewBuffer(uploadInfo))
+		uploadReq.Header.Set("Authorization", "Bearer "+token.Token)
+		resp, err = prodClient.Do(uploadReq)
 		if err != nil {
 			res.Write([]byte(err.Error()))
 			res.WriteHeader(http.StatusInternalServerError)
