@@ -14,11 +14,14 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/rs/cors"
 	mgo "gopkg.in/mgo.v2"
+
+	"neural-style-util"
 )
 
 var (
-	serverURL    = flag.String("host", "0.0.0.0", "neural style server url")
 	serverPort   = flag.String("port", "8001", "neural style server port")
+	consulAddr   = flag.String("consulAddr", "", "consul service address")
+	consulPort   = flag.String("consulPort", "", "consul service port")
 	dbServerURL  = flag.String("dbserver", "0.0.0.0", "style products server url")
 	dbServerPort = flag.String("dbport", "9000", "style products port url")
 )
@@ -28,7 +31,7 @@ func ensureIndex(s *mgo.Session) {
 	defer session.Close()
 
 	reviews := session.DB("store").C("reviews")
-	
+
 	index := mgo.Index{
 		Key:        []string{"productid"},
 		Unique:     false,
@@ -44,6 +47,12 @@ func ensureIndex(s *mgo.Session) {
 
 func main() {
 	flag.Parse()
+
+	advertiseAddr, err := NSUtil.GetIPv4Host()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
 	ctx := context.Background()
 	errChan := make(chan error)
@@ -70,13 +79,22 @@ func main() {
 
 	r = cors.AllowAll().Handler(r)
 
+	// Register Social Service to Consul
+	registar := NSUtil.Register(*consulAddr,
+		*consulPort,
+		advertiseAddr,
+		*serverPort, "social", logger)
+
+	serverLoopBackURL := "0.0.0.0"
 	// HTTP transport
 	go func() {
 		// How to show the debug info
-		level.Debug(logger).Log("info", "Start server at port "+*serverURL+":"+*serverPort,
+		level.Debug(logger).Log("info", "Start server at port "+serverLoopBackURL+":"+*serverPort,
 			"time", time.Now())
+		// register service
+		registar.Register()
 		handler := r
-		errChan <- http.ListenAndServe(*serverURL+":"+*serverPort, handler)
+		errChan <- http.ListenAndServe(serverLoopBackURL+":"+*serverPort, handler)
 	}()
 
 	go func() {
@@ -86,6 +104,7 @@ func main() {
 	}()
 
 	errInfo := <-errChan
+	registar.Deregister()
 	defer func(end time.Time) {
 		level.Debug(logger).Log("info", "End server: "+errInfo.Error(),
 			"time", end)
