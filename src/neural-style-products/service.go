@@ -1,4 +1,4 @@
-package ProductService
+package main
 
 import (
 	"bytes"
@@ -120,7 +120,6 @@ type Service interface {
 // ProductService for final image style transfer
 type ProductService struct {
 	OutputPath  string
-	Host        string
 	Port        string
 	Session     *mgo.Session
 	SaveURL     string
@@ -132,8 +131,8 @@ type ProductService struct {
 }
 
 // NewProductSVC create a new product service
-func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string, localDev bool, logger log.Logger,
-	session *mgo.Session) *ProductService {
+func NewProductSVC(outputPath, port, saveURL, findURL, cacheGetURL string, localDev bool, logger log.Logger,
+	session *mgo.Session) Service {
 	var client *memcache.Client
 	if !localDev {
 		var memcachedURL []string
@@ -152,7 +151,7 @@ func NewProductSVC(outputPath, host, port, saveURL, findURL, cacheGetURL string,
 		client = nil
 	}
 
-	return &ProductService{OutputPath: outputPath, Host: host, Port: port, Session: session,
+	return &ProductService{OutputPath: outputPath, Port: port, Session: session,
 		SaveURL: saveURL, FindURL: findURL, CacheGetURL: cacheGetURL, IsLocalDev: localDev,
 		Logger: logger, CacheClient: client}
 }

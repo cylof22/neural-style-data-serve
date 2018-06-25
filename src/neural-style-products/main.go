@@ -10,36 +10,44 @@ import (
 	"syscall"
 	"time"
 
+	"neural-style-util"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/rs/cors"
 	mgo "gopkg.in/mgo.v2"
-
-	"neural-style-util"
 )
 
 var (
-	serverPort   = flag.String("port", "8002", "neural style server port")
-	consulAddr   = flag.String("consulAddr", "localhost", "consul service address")
-	consulPort   = flag.String("consulPort", "8500", "consul service port")
-	dbServerURL  = flag.String("dbserver", "0.0.0.0", "style products server url")
-	dbServerPort = flag.String("dbport", "9000", "style products port url")
+	serverPort              = flag.String("port", "8001", "neural style server port")
+	consulAddr              = flag.String("consulAddr", "localhost", "consul service address")
+	consulPort              = flag.String("consulPort", "8500", "consul service port")
+	dbServerURL             = flag.String("dbserver", "0.0.0.0", "style products server url")
+	dbServerPort            = flag.String("dbport", "9000", "style products port url")
+	storageServerURL        = flag.String("storageURL", "0.0.0.0", "Storage Server URL")
+	storageServerPort       = flag.String("storagePort", "5000", "Storage Server Port")
+	storageServerSaveRouter = flag.String("saveRouter", "/api/v1/storage/save", "URL router for save")
+	storageServerFindRouter = flag.String("findRouter", "/api/v1/storage/find", "URL router for find")
+	cacheServer             = flag.String("cacheHost", "www.elforce.net", "memcached host")
+	cacheGetRouter          = flag.String("cacheGetURL", "/api/v1/cache/get", "Cache Get Router")
+	localDev                = flag.Bool("local", false, "Disable Cloud Storage and local Memcached")
+	outputPath              = flag.String("outputdir", "./", "neural style transfer output directory")
 )
 
 func ensureIndex(s *mgo.Session) {
 	session := s.Copy()
 	defer session.Close()
 
-	reviews := session.DB("store").C("reviews")
+	products := session.DB("store").C("products")
 
 	index := mgo.Index{
-		Key:        []string{"productid"},
-		Unique:     false,
+		Key:        []string{"id"},
+		Unique:     true,
 		DropDups:   true,
 		Background: true,
 		Sparse:     true,
 	}
-	err := reviews.EnsureIndex(index)
+	err := products.EnsureIndex(index)
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +55,6 @@ func ensureIndex(s *mgo.Session) {
 
 func main() {
 	flag.Parse()
-
 	advertiseAddr, err := NSUtil.GetIPv4Host()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -76,14 +83,13 @@ func main() {
 	}
 
 	r := makeHTTPHandler(ctx, session, logger)
-
 	r = cors.AllowAll().Handler(r)
 
 	// Register Social Service to Consul
 	registar := NSUtil.Register(*consulAddr,
 		*consulPort,
 		advertiseAddr,
-		*serverPort, "social", logger)
+		*serverPort, "products", logger)
 
 	serverLoopBackURL := "0.0.0.0"
 	// HTTP transport

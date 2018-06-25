@@ -2,12 +2,9 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"neural-style-util"
 	"time"
-
-	"neural-style-products"
 
 	"neural-style-user"
 
@@ -22,18 +19,11 @@ import (
 	mgo "gopkg.in/mgo.v2"
 )
 
-func encodeError(ctx context.Context, err error, w http.ResponseWriter) {
-	w.Header().Set("context-type", "application/json,charset=utf8")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"error": err.Error(),
-	})
-}
-
 func makeHTTPHandler(ctx context.Context, client consulsd.Client, dbSession *mgo.Session, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorLogger(logger),
-		httptransport.ServerErrorEncoder(encodeError),
+		httptransport.ServerErrorEncoder(NSUtil.EncodeError),
 		httptransport.ServerBefore(NSUtil.ParseToken),
 	}
 
@@ -42,21 +32,6 @@ func makeHTTPHandler(ctx context.Context, client consulsd.Client, dbSession *mgo
 	styleTransferService := StyleService.NewNeuralTransferSVC(*networkPath, *previewNetworkPath,
 		*outputPath, *serverURL, *serverPort)
 	r = StyleService.MakeHTTPHandler(ctx, r, authMiddleware, styleTransferService, options...)
-
-	// Product service
-	storageServiceURL := "http://" + *storageServerURL + ":" + *storageServerPort
-	storageSaveURL := storageServiceURL + *storageServerSaveRouter
-	storageFindURL := storageServiceURL + *storageServerFindRouter
-
-	cacheServiceURL := "http://" + *cacheServer
-	cacheGetURL := cacheServiceURL + *cacheGetRouter
-
-	var prods ProductService.Service
-	prods = ProductService.NewProductSVC(*outputPath, *serverURL, *serverPort,
-		storageSaveURL, storageFindURL, cacheGetURL, *localDev, logger, dbSession)
-
-	prods = ProductService.NewLoggingService(log.With(logger, "component", "product"), prods)
-	r = ProductService.MakeHTTPHandler(ctx, r, authMiddleware, prods, options...)
 
 	// User service
 	var users UserService.Service
@@ -71,9 +46,70 @@ func makeHTTPHandler(ctx context.Context, client consulsd.Client, dbSession *mgo
 	orders = OrderService.NewLoggingService(log.With(logger, "component", "order"), orders)
 	r = OrderService.MakeHTTPHandler(ctx, r, authMiddleware, orders, options...)
 
-	// Add API gateway for Social Service
-	duration := 500 * time.Millisecond
+	// output file server
+	outputFiles := http.FileServer(http.Dir("data/outputs/"))
+	r.PathPrefix("/outputs/").Handler(http.StripPrefix("/outputs/", outputFiles))
 
+	// style file server
+	styleFiles := http.FileServer(http.Dir("data/styles/"))
+	r.PathPrefix("/styles/").Handler(http.StripPrefix("/styles", styleFiles))
+
+	// artist masterpiece server
+	masterFiles := http.FileServer(http.Dir("data/masters/"))
+	r.PathPrefix("/masters/").Handler(http.StripPrefix("/masters/", masterFiles))
+
+	// content file server
+	contentFiles := http.FileServer(http.Dir("data/contents"))
+	r.PathPrefix("/contents/").Handler(http.StripPrefix("/contents/", contentFiles))
+
+	// template file
+	resourceFile := http.FileServer(http.Dir("dist"))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", resourceFile))
+
+	r.Path("/").Handler(resourceFile)
+
+	duration := 500 * time.Millisecond
+	// Add API gateway for proudct Service
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "upload-style", "POST",
+		"/api/upload/style", 4*duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "upload-styles", "POST",
+		"/api/upload/styles", 10*duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-artists", "GET",
+		"/api/artists", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-hotest-artists", "GET",
+		"/api/artists/hotest", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-products", "GET",
+		"/api/products", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-user-products", "GET",
+		"/api/products/user/{usrid}", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-tags", "GET",
+		"/api/products/tags/{tags}", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "prouducts", "get-user-product", "GET",
+		"/api/products/{id}", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-search", "GET",
+		"/api/search", 10*duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-cached-image", "GET",
+		"/api/v1/cache/get/{usrid}/{imgid}", 3*duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "delete-product", "DELETE",
+		"/api/products/{id}/delete", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "update-product", "POST",
+		"/api/products/{id}/update", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "post-transaction", "POST",
+		"/api/products/{id}/transactionupdate", duration, 3)
+
+	// Add API gateway for Social Service
 	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "get-reviews", "GET",
 		"/api/social/v1/{id}/reviews", duration, 3)
 

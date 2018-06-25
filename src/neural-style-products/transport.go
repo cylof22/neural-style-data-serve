@@ -1,4 +1,4 @@
-package ProductService
+package main
 
 import (
 	"context"
@@ -7,7 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/log"
+	mgo "gopkg.in/mgo.v2"
 
 	"neural-style-util"
 
@@ -246,8 +247,29 @@ func encodeNSSearchRespones(ctx context.Context, w http.ResponseWriter, response
 	return json.NewEncoder(w).Encode(productsRes.Prods)
 }
 
-// MakeHTTPHandler generate the http handler for the style service handler
-func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middleware, svc Service, options ...httptransport.ServerOption) *mux.Router {
+func makeHTTPHandler(ctx context.Context, session *mgo.Session, logger log.Logger) http.Handler {
+	r := mux.NewRouter()
+	options := []httptransport.ServerOption{
+		httptransport.ServerErrorLogger(logger),
+		httptransport.ServerErrorEncoder(NSUtil.EncodeError),
+		httptransport.ServerBefore(NSUtil.ParseToken),
+	}
+
+	// Product service
+	storageServiceURL := "http://" + *storageServerURL + ":" + *storageServerPort
+	storageSaveURL := storageServiceURL + *storageServerSaveRouter
+	storageFindURL := storageServiceURL + *storageServerFindRouter
+
+	cacheServiceURL := "http://" + *cacheServer
+	cacheGetURL := cacheServiceURL + *cacheGetRouter
+
+	svc := NewProductSVC(*outputPath, *serverPort,
+		storageSaveURL, storageFindURL, cacheGetURL, *localDev, logger, session)
+
+	svc = NewLoggingService(log.With(logger, "component", "product"), svc)
+
+	auth := NSUtil.AuthMiddleware(logger)
+
 	// POST /api/upload/content
 	contentUploadHandler := httptransport.NewServer(
 		auth(MakeNSContentUploadEndpoint(svc)),
@@ -339,8 +361,8 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 			options...,
 		))
 
-	// GET api/products/{id}/delete
-	r.Methods("GET").Path("/api/products/{id}/delete").Handler(httptransport.NewServer(
+	// DELETE api/products/{id}/delete
+	r.Methods("DELETE").Path("/api/products/{id}/delete").Handler(httptransport.NewServer(
 		auth(MakeNSDeleteProductEndpoint(svc)),
 		decodeNSDeleteProductRequest,
 		encodeNSDeleteProductResponse,
@@ -366,29 +388,6 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 	// add tencent yun authorization ssl file
 	authFiles := http.FileServer(http.Dir("data/auth/"))
 	r.PathPrefix("/.well-known/pki-validation/").Handler(http.StripPrefix("/.well-known/pki-validation/", authFiles))
-
-	// Todo: Web Service maybe need a seperate server
-	// output file server
-	outputFiles := http.FileServer(http.Dir("data/outputs/"))
-	r.PathPrefix("/outputs/").Handler(http.StripPrefix("/outputs/", outputFiles))
-
-	// style file server
-	styleFiles := http.FileServer(http.Dir("data/styles/"))
-	r.PathPrefix("/styles/").Handler(http.StripPrefix("/styles", styleFiles))
-
-	// artist masterpiece server
-	masterFiles := http.FileServer(http.Dir("data/masters/"))
-	r.PathPrefix("/masters/").Handler(http.StripPrefix("/masters/", masterFiles))
-
-	// content file server
-	contentFiles := http.FileServer(http.Dir("data/contents"))
-	r.PathPrefix("/contents/").Handler(http.StripPrefix("/contents/", contentFiles))
-
-	// template file
-	resourceFile := http.FileServer(http.Dir("dist"))
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", resourceFile))
-
-	r.Path("/").Handler(resourceFile)
 
 	return r
 }
