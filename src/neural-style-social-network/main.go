@@ -20,8 +20,8 @@ import (
 
 var (
 	serverPort   = flag.String("port", "8001", "neural style server port")
-	consulAddr   = flag.String("consulAddr", "", "consul service address")
-	consulPort   = flag.String("consulPort", "", "consul service port")
+	consulAddr   = flag.String("consulAddr", "localhost", "consul service address")
+	consulPort   = flag.String("consulPort", "8500", "consul service port")
 	dbServerURL  = flag.String("dbserver", "0.0.0.0", "style products server url")
 	dbServerPort = flag.String("dbport", "9000", "style products port url")
 )
