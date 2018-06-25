@@ -127,6 +127,10 @@ type NSSearchResponse struct {
 	Err   error
 }
 
+type HealthResponse struct {
+	Status bool `json:"status"`
+}
+
 // MakeNSContentUploadEndpoint upload the content file
 func MakeNSContentUploadEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -247,5 +251,12 @@ func MakeNSSearch(svc Service) endpoint.Endpoint {
 		req := request.(NSSearchRequest)
 		prods, err := svc.Search(req.Info)
 		return NSSearchResponse{Prods: prods, Err: err}, err
+	}
+}
+
+func makeNSHealthCheck(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		isOk := svc.HealthCheck()
+		return HealthResponse{Status: isOk}, nil
 	}
 }

@@ -61,6 +61,10 @@ func main() {
 		return
 	}
 
+	if *localDev {
+		advertiseAddr = "localhost"
+	}
+
 	ctx := context.Background()
 	errChan := make(chan error)
 
@@ -89,7 +93,7 @@ func main() {
 	registar := NSUtil.Register(*consulAddr,
 		*consulPort,
 		advertiseAddr,
-		*serverPort, "products", logger)
+		*serverPort, "products", "v1", logger)
 
 	serverLoopBackURL := "0.0.0.0"
 	// HTTP transport

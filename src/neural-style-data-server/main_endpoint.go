@@ -70,65 +70,65 @@ func makeHTTPHandler(ctx context.Context, client consulsd.Client, dbSession *mgo
 
 	duration := 500 * time.Millisecond
 	// Add API gateway for proudct Service
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "upload-style", "POST",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "POST",
 		"/api/upload/style", 4*duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "upload-styles", "POST",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "POST",
 		"/api/upload/styles", 10*duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-artists", "GET",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "GET",
 		"/api/artists", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-hotest-artists", "GET",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "GET",
 		"/api/artists/hotest", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-products", "GET",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "GET",
 		"/api/products", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-user-products", "GET",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "GET",
 		"/api/products/user/{usrid}", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-tags", "GET",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "GET",
 		"/api/products/tags/{tags}", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "prouducts", "get-user-product", "GET",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "GET",
 		"/api/products/{id}", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-search", "GET",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "GET",
 		"/api/search", 10*duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "get-cached-image", "GET",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "GET",
 		"/api/v1/cache/get/{usrid}/{imgid}", 3*duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "delete-product", "DELETE",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "DELETE",
 		"/api/products/{id}/delete", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "update-product", "POST",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "POST",
 		"/api/products/{id}/update", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "post-transaction", "POST",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "POST",
 		"/api/products/{id}/transactionupdate", duration, 3)
 
 	// Add API gateway for Social Service
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "get-reviews", "GET",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "v1", "GET",
 		"/api/social/v1/{id}/reviews", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "add-review", "POST",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "v1", "POST",
 		"/api/social/v1/{id}/reviews/add", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "get-followees", "GET",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "v1", "GET",
 		"/api/social/v1/{id}/followees", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "add-followee", "POST",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "v1", "POST",
 		"/api/social/v1/{id}/followees/add", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "delete-followee", "DELETE",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "v1", "DELETE",
 		"/api/social/v1/{productid}/{userid}/followees/delete", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "get-summary", "GET",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "v1", "GET",
 		"/api/social/v1/{productid}/summary", duration, 3)
 
-	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "get-summary", "GET",
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "social", "v1", "GET",
 		"/api/social/v1/{user}/followees/products", duration, 3)
 
 	return r

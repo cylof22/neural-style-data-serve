@@ -132,3 +132,11 @@ func (svc *loggingService) Search(keyvals map[string]interface{}) (prods []Produ
 
 	return svc.dataService.Search(keyvals)
 }
+
+func (svc *loggingService) HealthCheck() bool {
+	defer func(begin time.Time) {
+		level.Debug(svc.logger).Log("method", "HealthCheck", "took", time.Since(begin))
+	}(time.Now())
+
+	return svc.dataService.HealthCheck()
+}

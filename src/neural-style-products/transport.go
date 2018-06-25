@@ -247,6 +247,15 @@ func encodeNSSearchRespones(ctx context.Context, w http.ResponseWriter, response
 	return json.NewEncoder(w).Encode(productsRes.Prods)
 }
 
+func decodeGetNSHealthRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return nil, nil
+}
+
+func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	return json.NewEncoder(w).Encode(response)
+}
+
 func makeHTTPHandler(ctx context.Context, session *mgo.Session, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 	options := []httptransport.ServerOption{
@@ -382,6 +391,14 @@ func makeHTTPHandler(ctx context.Context, session *mgo.Session, logger log.Logge
 		MakeNSUpdateProductAfterTransactionEndpoint(svc),
 		decodeNSUpdateProductAfterTransactionRequest,
 		encodeNSUpdateProductAfterTransactionResponse,
+		options...,
+	))
+
+	// GET /health
+	r.Methods("GET").Path("/health").Handler(httptransport.NewServer(
+		makeNSHealthCheck(svc),
+		decodeGetNSHealthRequest,
+		encodeResponse,
 		options...,
 	))
 

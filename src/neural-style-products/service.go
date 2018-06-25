@@ -115,6 +115,7 @@ type Service interface {
 	UpdateProduct(productID string, productData UploadProduct) error
 	UpdateProductAfterTransaction(productId string, newOwner string, newPrice string) error
 	Search(keyvals map[string]interface{}) ([]Product, error)
+	HealthCheck() bool
 }
 
 // ProductService for final image style transfer
@@ -726,4 +727,9 @@ func (svc *ProductService) Search(keyvals map[string]interface{}) ([]Product, er
 	}
 
 	return prods, nil
+}
+
+func (svc *ProductService) HealthCheck() bool {
+	//
+	return true
 }

@@ -24,6 +24,7 @@ var (
 	consulPort   = flag.String("consulPort", "8500", "consul service port")
 	dbServerURL  = flag.String("dbserver", "0.0.0.0", "style products server url")
 	dbServerPort = flag.String("dbport", "9000", "style products port url")
+	localDev     = flag.Bool("local", false, "Disable Cloud Storage and local Memcached")
 )
 
 func ensureIndex(s *mgo.Session) {
@@ -52,6 +53,10 @@ func main() {
 	if err != nil {
 		fmt.Println(err.Error())
 		return
+	}
+
+	if *localDev {
+		advertiseAddr = "localhost"
 	}
 
 	ctx := context.Background()
@@ -83,7 +88,7 @@ func main() {
 	registar := NSUtil.Register(*consulAddr,
 		*consulPort,
 		advertiseAddr,
-		*serverPort, "social", logger)
+		*serverPort, "social", "v1", logger)
 
 	serverLoopBackURL := "0.0.0.0"
 	// HTTP transport
