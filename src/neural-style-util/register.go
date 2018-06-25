@@ -12,7 +12,7 @@ import (
 
 // Register add the service to the consul register center
 func Register(consulAddress, consulPort, advertiseAddress, advertisePort string,
-	serviceName string, log log.Logger) (registar sd.Registrar) {
+	serviceName, tag string, log log.Logger) (registar sd.Registrar) {
 	// Service discovery domain. In this example we use Consul.
 	var client consulsd.Client
 	{
@@ -40,7 +40,7 @@ func Register(consulAddress, consulPort, advertiseAddress, advertisePort string,
 		Name:    serviceName,
 		Address: advertiseAddress,
 		Port:    port,
-		Tags:    []string{serviceName},
+		Tags:    []string{tag},
 		Check:   &check,
 	}
 	return consulsd.NewRegistrar(client, &asr, log)
