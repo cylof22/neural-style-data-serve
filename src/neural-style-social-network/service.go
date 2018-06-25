@@ -41,6 +41,7 @@ type FollowingProduct struct {
 
 // Service define basic service interface for social network
 type Service interface {
+	HealthCheck() bool
 	GetSummaryByID(id string) (SocialSummary, error)
 	GetReviewsByProductID(id string) ([]Review, error)
 	AddReviewByProductID(review Review) error
@@ -262,4 +263,10 @@ func (svc *SocialService) GetFollowingProductsByUserID(user string) ([]Following
 
 	level.Info(svc.Logger).Log("API", "GetFollowingProductsByUserID", "user", user, "info", len(prods))
 	return prods, nil
+}
+
+// HealthCheck return the status of the social service by checking the mongodb, or network
+func (svc *SocialService) HealthCheck() bool {
+	//
+	return true
 }

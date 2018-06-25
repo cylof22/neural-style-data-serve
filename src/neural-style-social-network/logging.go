@@ -78,3 +78,11 @@ func (svc *loggingService) GetFollowingProductsByUserID(user string) (prods []Fo
 
 	return svc.socialService.GetFollowingProductsByUserID(user)
 }
+
+func (svc *loggingService) HealthCheck() bool {
+	defer func(begin time.Time) {
+		level.Debug(svc.logger).Log("method", "HealthCheck", "took", time.Since(begin))
+	}(time.Now())
+
+	return svc.socialService.HealthCheck()
+}

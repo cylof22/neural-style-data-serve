@@ -75,6 +75,11 @@ type NSGetFolloweeProductsByUserResponse struct {
 	Err   error
 }
 
+//HealthResponse return the status of the health
+type HealthResponse struct {
+	Status bool `json:"status"`
+}
+
 func encodeError(ctx context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("context-type", "application/json,charset=utf8")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -135,5 +140,12 @@ func makeNSGetFolloweeProductsByUserEndpoint(svc Service) endpoint.Endpoint {
 		req := request.(NSGetFolloweeProductsByUserRequest)
 		prods, err := svc.GetFollowingProductsByUserID(req.User)
 		return NSGetFolloweeProductsByUserResponse{Prods: prods, Err: err}, err
+	}
+}
+
+func makeNSGetHealthEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		status := svc.HealthCheck()
+		return HealthResponse{Status: status}, nil
 	}
 }
