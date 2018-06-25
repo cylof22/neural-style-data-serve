@@ -12,6 +12,8 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	consulsd "github.com/go-kit/kit/sd/consul"
+	"github.com/hashicorp/consul/api"
 	mgo "gopkg.in/mgo.v2"
 )
 
@@ -31,6 +33,8 @@ var (
 	previewNetworkPath      = flag.String("previewNetwork", "", "neural network preview model path")
 	outputPath              = flag.String("outputdir", "./", "neural style transfer output directory")
 	productsRouter          = flag.String("productsRouter", "/api/products", "URL router for products")
+	consulAddr              = flag.String("consul.addr", "localhost", "consul address")
+	consulPort              = flag.String("consul.port", "8500", "consul port")
 )
 
 func ensureIndex(s *mgo.Session) {
@@ -89,7 +93,20 @@ func main() {
 		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	}
 
-	r := makeHTTPHandler(ctx, session, logger)
+	var client consulsd.Client
+	{
+		consulConfig := api.DefaultConfig()
+
+		consulConfig.Address = "http://" + *consulAddr + ":" + *consulPort
+		consulClient, err := api.NewClient(consulConfig)
+		if err != nil {
+			logger.Log("err", err)
+			os.Exit(1)
+		}
+		client = consulsd.NewClient(consulClient)
+	}
+
+	r := makeHTTPHandler(ctx, client, session, logger)
 
 	// HTTP transport
 	go func() {
