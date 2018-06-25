@@ -39,7 +39,7 @@ func GetIPv4Host() (string, error) {
 func RegisterSDService(ctx context.Context, r *mux.Router, client consul.Client, logger log.Logger, name, tag, method, path string,
 	duration time.Duration, retryTimes int) *mux.Router {
 	factory := registerFactory(ctx, method)
-	tags := []string{name, tag}
+	tags := []string{tag}
 	instancer := consul.NewInstancer(client, logger, name, tags, true)
 	endpointer := sd.NewEndpointer(instancer, factory, logger)
 	balancer := lb.NewRoundRobin(endpointer)
@@ -94,7 +94,7 @@ func registerFactory(_ context.Context, method string) sd.Factory {
 		)
 
 		enc = func(_ context.Context, req *http.Request, request interface{}) error {
-			inputReq, isOk := request.(http.Request)
+			inputReq, isOk := request.(*http.Request)
 			if !isOk {
 				return errors.New("Bad Request")
 			}
