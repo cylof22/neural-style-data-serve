@@ -23,6 +23,15 @@ import (
 	ht "github.com/go-kit/kit/transport/http"
 )
 
+// EndpointParam ...
+type EndpointParam struct {
+	Tag        string
+	Method     string
+	Path       string
+	Duration   time.Duration
+	RetryTimes int
+}
+
 // GetIPv4Host get the activate ipv4 host address
 func GetIPv4Host() (string, error) {
 	host, _ := os.Hostname()
@@ -36,20 +45,23 @@ func GetIPv4Host() (string, error) {
 }
 
 // RegisterSDService register a general service discovery for a path and method
-func RegisterSDService(ctx context.Context, r *mux.Router, client consul.Client, logger log.Logger, name, tag, method, path string,
-	duration time.Duration, retryTimes int) *mux.Router {
-	factory := registerFactory(ctx, method)
-	tags := []string{tag}
-	instancer := consul.NewInstancer(client, logger, name, tags, true)
-	endpointer := sd.NewEndpointer(instancer, factory, logger)
-	balancer := lb.NewRoundRobin(endpointer)
-	retry := lb.Retry(retryTimes, duration, balancer)
+func RegisterSDService(ctx context.Context, r *mux.Router, client consul.Client, logger log.Logger, name string,
+	params []EndpointParam) *mux.Router {
 
-	r.Methods(method).Path(path).Handler(ht.NewServer(
-		retry,
-		decodeServiceDiscoveryRequest,
-		encodeServiceDiscoveryResponse,
-	))
+	for _, param := range params {
+		factory := registerFactory(ctx, param.Method)
+		tags := []string{param.Tag}
+		instancer := consul.NewInstancer(client, logger, name, tags, true)
+		endpointer := sd.NewEndpointer(instancer, factory, logger)
+		balancer := lb.NewRoundRobin(endpointer)
+		retry := lb.Retry(param.RetryTimes, param.Duration, balancer)
+
+		r.Methods(param.Method).Path(param.Path).Handler(ht.NewServer(
+			retry,
+			decodeServiceDiscoveryRequest,
+			encodeServiceDiscoveryResponse,
+		))
+	}
 
 	return r
 }
