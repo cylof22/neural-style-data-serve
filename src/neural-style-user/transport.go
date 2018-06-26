@@ -1,4 +1,4 @@
-package UserService
+package main
 
 import (
 	"context"
@@ -8,7 +8,8 @@ import (
 
 	"neural-style-util"
 
-	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/log"
+	mgo "gopkg.in/mgo.v2"
 
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
@@ -79,8 +80,19 @@ func encodeNSUpdateUserInfoResponse(ctx context.Context, w http.ResponseWriter, 
 	return json.NewEncoder(w).Encode(updateRes.Portrait)
 }
 
-// MakeHTTPHandler generate the http handler for the style service handler
-func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middleware, svc Service, options ...httptransport.ServerOption) *mux.Router {
+func makeHTTPHandler(ctx context.Context, session *mgo.Session, logger log.Logger) http.Handler {
+	r := mux.NewRouter()
+	options := []httptransport.ServerOption{
+		httptransport.ServerErrorLogger(logger),
+		httptransport.ServerErrorEncoder(NSUtil.EncodeError),
+		httptransport.ServerBefore(NSUtil.ParseToken),
+	}
+
+	// User service
+	var svc Service
+	svc = NewUserSVC("0.0.0.0", *serverPort, logger, session)
+	svc = NewLoggingService(log.With(logger, "component", "user"), svc)
+
 	// Register
 	registerHandler := httptransport.NewServer(
 		MakeNSRegisterEndpoint(svc),
@@ -88,6 +100,9 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		encodeNSRegisterResponse,
 		options...,
 	)
+
+	auth := NSUtil.AuthMiddleware(logger)
+
 	r.Methods("POST").Path("/api/v1/register").Handler(NSUtil.AccessControl(registerHandler))
 
 	// Login

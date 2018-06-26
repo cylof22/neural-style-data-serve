@@ -1,4 +1,4 @@
-package UserService
+package main
 
 import (
 	"time"
@@ -47,4 +47,3 @@ func (svc *loggingService) UpdateUserInfo(userData UserInfo) (newPortrait string
 
 	return svc.loginService.UpdateUserInfo(userData)
 }
-

@@ -1,4 +1,4 @@
-package UserService
+package main
 
 import (
 	"context"
@@ -39,7 +39,7 @@ type NSAUpdateUserInfoRequest struct {
 // NSRegisterResponse returns register result
 type NSUpdateUserInfoResponse struct {
 	Portrait string
-	Err    error
+	Err      error
 }
 
 // MakeNSRegisterEndpoint generate the endpoint for new user register
