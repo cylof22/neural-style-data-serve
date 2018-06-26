@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	serverPort   = flag.String("port", "8001", "neural style server port")
+	serverPort   = flag.String("port", "8003", "neural style server port")
 	consulAddr   = flag.String("consulAddr", "localhost", "consul service address")
 	consulPort   = flag.String("consulPort", "8500", "consul service port")
 	dbServerURL  = flag.String("dbserver", "0.0.0.0", "style products server url")
@@ -82,7 +82,7 @@ func main() {
 	r := makeHTTPHandler(ctx, session, logger)
 	r = cors.AllowAll().Handler(r)
 
-	// Register Social Service to Consul
+	// Register User Service to Consul
 	registar := NSUtil.Register(*consulAddr,
 		*consulPort,
 		advertiseAddr,
