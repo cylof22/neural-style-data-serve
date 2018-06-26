@@ -42,6 +42,10 @@ type NSUpdateUserInfoResponse struct {
 	Err      error
 }
 
+type HealthResponse struct {
+	Status bool `json:"status"`
+}
+
 // MakeNSRegisterEndpoint generate the endpoint for new user register
 func MakeNSRegisterEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -73,5 +77,12 @@ func MakeNSUpdateUserInfoEndpoint(svc Service) endpoint.Endpoint {
 		req := request.(NSAUpdateUserInfoRequest)
 		result, err := svc.UpdateUserInfo(req.UserData)
 		return NSUpdateUserInfoResponse{Portrait: result, Err: err}, err
+	}
+}
+
+func makeNSHealthCheck(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		isOk := svc.HealthCheck()
+		return HealthResponse{Status: isOk}, nil
 	}
 }

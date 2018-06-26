@@ -80,6 +80,15 @@ func encodeNSUpdateUserInfoResponse(ctx context.Context, w http.ResponseWriter, 
 	return json.NewEncoder(w).Encode(updateRes.Portrait)
 }
 
+func decodeGetNSHealthRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return nil, nil
+}
+
+func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	return json.NewEncoder(w).Encode(response)
+}
+
 func makeHTTPHandler(ctx context.Context, session *mgo.Session, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 	options := []httptransport.ServerOption{
@@ -129,6 +138,14 @@ func makeHTTPHandler(ctx context.Context, session *mgo.Session, logger log.Logge
 		options...,
 	)
 	r.Methods("POST").Path("/api/v1/users/{username}/update").Handler(NSUtil.AccessControl(updateUserInfoHandler))
+
+	// GET /health
+	r.Methods("GET").Path("/health").Handler(httptransport.NewServer(
+		makeNSHealthCheck(svc),
+		decodeGetNSHealthRequest,
+		encodeResponse,
+		options...,
+	))
 
 	// content file server
 	contentFiles := http.FileServer(http.Dir("data/portraits"))

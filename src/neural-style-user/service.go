@@ -1,4 +1,4 @@
-package UserService
+package main
 
 import (
 	"encoding/base64"
@@ -51,6 +51,7 @@ type Service interface {
 	Login(loginData UserInfo) (UserToken, error)
 	GetUserInfo(userName string) (UserInfo, error)
 	UpdateUserInfo(userData UserInfo) (string, error)
+	HealthCheck() bool
 }
 
 // UserService for user login service
@@ -228,4 +229,8 @@ func (svc *UserService) uploadPicture(picData, picID, picFolder string) (string,
 	newImageURL := "http://localhost:8000/" + picFolder + "/" + outfileName
 	level.Debug(svc.Logger).Log("Picture URL", newImageURL)
 	return newImageURL, nil
+}
+
+func (svc *UserService) HealthCheck() bool {
+	return true
 }

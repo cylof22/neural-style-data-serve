@@ -47,3 +47,11 @@ func (svc *loggingService) UpdateUserInfo(userData UserInfo) (newPortrait string
 
 	return svc.loginService.UpdateUserInfo(userData)
 }
+
+func (svc *loggingService) HealthCheck() bool {
+	defer func(begin time.Time) {
+		svc.logger.Log("method", "HealthCheck", "took", time.Since(begin))
+	}(time.Now())
+
+	return svc.loginService.HealthCheck()
+}
