@@ -61,10 +61,6 @@ func main() {
 		return
 	}
 
-	if *localDev {
-		advertiseAddr = "localhost"
-	}
-
 	ctx := context.Background()
 	errChan := make(chan error)
 
@@ -89,7 +85,7 @@ func main() {
 	r := makeHTTPHandler(ctx, session, logger)
 	r = cors.AllowAll().Handler(r)
 
-	// Register Social Service to Consul
+	// Register Products Service to Consul
 	registar := NSUtil.Register(*consulAddr,
 		*consulPort,
 		advertiseAddr,
