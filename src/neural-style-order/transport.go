@@ -1,4 +1,4 @@
-package OrderService
+package main
 
 import (
 	"context"
@@ -8,19 +8,19 @@ import (
 
 	"neural-style-util"
 
-	"github.com/go-kit/kit/endpoint"
-
+	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
+	mgo "gopkg.in/mgo.v2"
 
 	"github.com/gorilla/mux"
 )
 
 type ProductQuery struct {
-	ProductId      []string `json:"productId"`
+	ProductId []string `json:"productId"`
 }
 
 type ChainResult struct {
-	Result      string `json:"result"`
+	Result string `json:"result"`
 }
 
 func decodeNSGetOrdersRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -129,8 +129,30 @@ func decodeNSAskForReturnRequest(_ context.Context, r *http.Request) (interface{
 	return NSAskForReturnRequest{OrderId: orderId, ReturnData: returnInfo}, nil
 }
 
-// MakeHTTPHandler generate the http handler for the style service handler
-func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middleware, svc Service, options ...httptransport.ServerOption) *mux.Router {
+func decodeGetNSHealthRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	return nil, nil
+}
+
+func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	return json.NewEncoder(w).Encode(response)
+}
+
+func makeHTTPHandler(ctx context.Context, session *mgo.Session, logger log.Logger) http.Handler {
+	r := mux.NewRouter()
+	options := []httptransport.ServerOption{
+		httptransport.ServerErrorLogger(logger),
+		httptransport.ServerErrorEncoder(NSUtil.EncodeError),
+		httptransport.ServerBefore(NSUtil.ParseToken),
+	}
+
+	auth := NSUtil.AuthMiddleware(logger)
+
+	// Order service
+	productsURL := "http://" + *apiSite + *productsURL
+	svc := NewOrderSVC(logger, session, productsURL)
+	svc = NewLoggingService(log.With(logger, "component", "order"), svc)
+
 	// GET /api/v1/transactionorders
 	r.Methods("GET").Path("/api/v1/transactionorders").Handler(httptransport.NewServer(
 		MakeNSGetOrdersInTransactionEndpoint(svc),
@@ -162,7 +184,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		encodeNSGetOrderByProductIdResponse,
 		options...,
 	))
-	
+
 	// POST /api/v1/orders/create
 	orderCreateHandler := httptransport.NewServer(
 		auth(MakeNSSellEndpoint(svc)),
@@ -171,7 +193,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	)
 	r.Methods("POST").Path("/api/v1/order/create").Handler(NSUtil.AccessControl(orderCreateHandler))
-	
+
 	// GET /api/v1/orders/{id}/delete
 	r.Methods("GET").Path("/api/v1/orders/{id}/delete").Handler(httptransport.NewServer(
 		auth(MakeNSStopSellingEndpoint(svc)),
@@ -179,7 +201,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		encodeNSErrorResponse,
 		options...,
 	))
-	
+
 	// POST /api/v1/orders/{id}/buy
 	buyHandler := httptransport.NewServer(
 		auth(MakeNSBuyEndpoint(svc)),
@@ -188,7 +210,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	)
 	r.Methods("POST").Path("/api/v1/orders/{id}/buy").Handler(NSUtil.AccessControl(buyHandler))
-	
+
 	// POST /api/v1/orders/{chainId}/chainconfirm
 	chainApplyHandler := httptransport.NewServer(
 		auth(MakeNSApplyConfirmFromChainEndpoint(svc)),
@@ -197,7 +219,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	)
 	r.Methods("POST").Path("/api/v1/orders/{chainId}/chainconfirm").Handler(NSUtil.AccessControl(chainApplyHandler))
-	
+
 	// POST /api/v1/orders/{id}/productship
 	shipProHandler := httptransport.NewServer(
 		auth(MakeNSShipProductEndpoint(svc)),
@@ -206,7 +228,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	)
 	r.Methods("POST").Path("/api/v1/orders/{id}/productship").Handler(NSUtil.AccessControl(shipProHandler))
-	
+
 	// GET /api/v1/orders/{id}/confirm
 	r.Methods("GET").Path("/api/v1/orders/{id}/confirm").Handler(httptransport.NewServer(
 		auth(MakeNSConfirmOrderEndpoint(svc)),
@@ -214,7 +236,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		encodeNSErrorResponse,
 		options...,
 	))
-	
+
 	// POST /api/v1/orders/{id}/askreturn
 	askReturnHandler := httptransport.NewServer(
 		auth(MakeNSAskForReturnEndpoint(svc)),
@@ -223,7 +245,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	)
 	r.Methods("POST").Path("/api/v1/orders/{id}/askreturn").Handler(NSUtil.AccessControl(askReturnHandler))
-	
+
 	// GET /api/v1/orders/{id}/returnagreed
 	r.Methods("GET").Path("/api/v1/orders/{id}/returnagreed").Handler(httptransport.NewServer(
 		auth(MakeNSAgreeReturnEndpoint(svc)),
@@ -231,7 +253,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		encodeNSErrorResponse,
 		options...,
 	))
-	
+
 	// POST /api/v1/orders/{id}/returnship
 	shipReturnHandler := httptransport.NewServer(
 		auth(MakeNSShipReturnEndpoint(svc)),
@@ -240,7 +262,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		options...,
 	)
 	r.Methods("POST").Path("/api/v1/orders/{id}/returnship").Handler(NSUtil.AccessControl(shipReturnHandler))
-	
+
 	// GET /api/v1/orders/{id}/returnconfirmed
 	r.Methods("GET").Path("/api/v1/orders/{id}/returnconfirmed").Handler(httptransport.NewServer(
 		auth(MakeNSConfirmReturnEndpoint(svc)),
@@ -248,7 +270,7 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 		encodeNSErrorResponse,
 		options...,
 	))
-	
+
 	// POST /api/v1/orders/{chainId}/chaincancel
 	chainCancelHandler := httptransport.NewServer(
 		auth(MakeNSApplyCancelFromChainEndpoint(svc)),
@@ -258,9 +280,12 @@ func MakeHTTPHandler(ctx context.Context, r *mux.Router, auth endpoint.Middlewar
 	)
 	r.Methods("POST").Path("/api/v1/orders/{chainId}/chaincancel").Handler(NSUtil.AccessControl(chainCancelHandler))
 
-	// images for explaining return
-	returnFiles := http.FileServer(http.Dir("data/returns"))
-	r.PathPrefix("/returns/").Handler(http.StripPrefix("/returns/", returnFiles))
+	r.Methods("GET").Path("/health").Handler(httptransport.NewServer(
+		makeNSHealthCheck(svc),
+		decodeGetNSHealthRequest,
+		encodeResponse,
+		options...,
+	))
 
 	return r
 }

@@ -1,18 +1,18 @@
-package OrderService
+package main
 
 import (
 	"context"
+
 	"github.com/go-kit/kit/endpoint"
 )
-
 
 type NSGetOrdersRequest struct {
 	Buyer string
 }
 
 type NSOrdersResponse struct {
-	Orders   []Order
-	Err      error
+	Orders []Order
+	Err    error
 }
 
 type NSGetSellingsRequest struct {
@@ -24,30 +24,30 @@ type NSGetOrderByProductIdRequest struct {
 }
 
 type NSGetOrderByProductIdResponse struct {
-	Target    Order
-	Err       error
+	Target Order
+	Err    error
 }
 
 type NSSellRequest struct {
-	SellInfo  Order
+	SellInfo Order
 }
 
 type NSErrorResponse struct {
-	Err       error
+	Err error
 }
 
 type NSOrderIdRequest struct {
-	OrderId   string
+	OrderId string
 }
 
 type NSBuyRequest struct {
-	OrderId   string
-	BuyData   BuyInfo
+	OrderId string
+	BuyData BuyInfo
 }
 
 type NSChainRequest struct {
-	ChainId   string
-	Result    string
+	ChainId string
+	Result  string
 }
 
 type NSExpressRequest struct {
@@ -56,8 +56,12 @@ type NSExpressRequest struct {
 }
 
 type NSAskForReturnRequest struct {
-	OrderId     string
-	ReturnData  ReturnInfo
+	OrderId    string
+	ReturnData ReturnInfo
+}
+
+type HealthResponse struct {
+	Status bool `json:"status"`
 }
 
 func MakeNSGetOrdersEndpoint(svc Service) endpoint.Endpoint {
@@ -176,5 +180,12 @@ func MakeNSApplyCancelFromChainEndpoint(svc Service) endpoint.Endpoint {
 		req := request.(NSChainRequest)
 		err := svc.ApplyCancelFromChain(req.ChainId, req.Result)
 		return NSErrorResponse{Err: err}, err
+	}
+}
+
+func makeNSHealthCheck(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		isOk := svc.HealthCheck()
+		return HealthResponse{Status: isOk}, nil
 	}
 }

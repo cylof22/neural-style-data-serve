@@ -1,13 +1,14 @@
-package OrderService
+package main
 
 import (
-	"errors"
-	"strconv"
-	"time"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"neural-style-util"
+	"strconv"
+	"time"
+
 	"neural-style-chain"
 
 	"github.com/go-kit/kit/log"
@@ -20,54 +21,55 @@ import (
 
 var generalErrorInfo = "Server is busy. Please try it later."
 var maxDuration = 30
-var testDev bool = true;
+var testDev bool = true
+
 type OrderStatus struct {
-	Status            string   `json:"status"`
+	Status string `json:"status"`
 }
 
 type Order struct {
-	ID               string          `json:"id"`
-	Product          ProductInfo     `json:"product"`
-	ChainId          string          `json:"chainId"`
-	Status           string          `json:"status"`  
-	StartTime        string          `json:"startTime"` 
-	ServerStartTime  time.Time       `json:"serverStartTime"`
-	Duration         string          `json:"duration"`
-	Express          Express         `json:"express"`
-	ReturnInfo       ReturnInfo      `json:"returnInfo"`
-	BuyInfo          BuyInfo         `json:"buyInfo"`
-	CompleteTime     time.Time       `json:"completeTime"`
+	ID              string      `json:"id"`
+	Product         ProductInfo `json:"product"`
+	ChainId         string      `json:"chainId"`
+	Status          string      `json:"status"`
+	StartTime       string      `json:"startTime"`
+	ServerStartTime time.Time   `json:"serverStartTime"`
+	Duration        string      `json:"duration"`
+	Express         Express     `json:"express"`
+	ReturnInfo      ReturnInfo  `json:"returnInfo"`
+	BuyInfo         BuyInfo     `json:"buyInfo"`
+	CompleteTime    time.Time   `json:"completeTime"`
 }
 
 type ProductInfo struct {
-	Id               string     `json:"id"`
-	Owner            string     `json:"owner"`
-	Url              string     `json:"url"`
-	Type             string     `json:"type"`
-	PriceType        string     `json:"priceType"`
-	PriceValue       string     `json:"priceValue"`
+	Id         string `json:"id"`
+	Owner      string `json:"owner"`
+	Url        string `json:"url"`
+	Type       string `json:"type"`
+	PriceType  string `json:"priceType"`
+	PriceValue string `json:"priceValue"`
 }
 
 type BuyInfo struct {
-	Buyer            string     `json:"buyer"`
-	PriceValue       string     `json:"priceValue"`
-	StartTime        string     `json:"startTime"`
-	ServerStartTime  time.Time  `json:"serverStartTime"`
+	Buyer           string    `json:"buyer"`
+	PriceValue      string    `json:"priceValue"`
+	StartTime       string    `json:"startTime"`
+	ServerStartTime time.Time `json:"serverStartTime"`
 }
 
 type Express struct {
-	Company          string     `json:"company"`
-	Number           string     `json:"number"`
-	StartTime        time.Time  `json:"startTime"`
+	Company   string    `json:"company"`
+	Number    string    `json:"number"`
+	StartTime time.Time `json:"startTime"`
 }
 
 type ReturnInfo struct {
-	Description      string     `json:"description"`
-	Images           []string   `json:"images"`
-	AskTime          time.Time  `json:"askTime"`				// start time when asking return
-	AgreeTime        time.Time  `json:"agreeTime"`              // start time when agreeing return
-	ConfirmTime      time.Time  `json:"confirmTime"`            // start time when confirming return
-	Express          Express    `json:"express"`
+	Description string    `json:"description"`
+	Images      []string  `json:"images"`
+	AskTime     time.Time `json:"askTime"`     // start time when asking return
+	AgreeTime   time.Time `json:"agreeTime"`   // start time when agreeing return
+	ConfirmTime time.Time `json:"confirmTime"` // start time when confirming return
+	Express     Express   `json:"express"`
 }
 
 // Service define the basic interface
@@ -76,31 +78,30 @@ type Service interface {
 	GetOrders(buyer string) ([]Order, error)
 	GetSellings(seller string) ([]Order, error)
 	GetOrderByProductId(productId string) (Order, error)
-	Sell(sellInfo Order) (error)
-	StopSelling(orderId string) (error)
-	Buy(orderId string, buyInfo BuyInfo) (error)
-	ApplyConfirmFromChain(chainId string, result string) (error)
-	ShipProduct(orderId string, express Express) (error)
-	ConfirmOrder(orderId string) (error)
-	AskForReturn(orderId string, returnInfo ReturnInfo) (error)
-	AgreeReturn(orderId string) (error)
-	ShipReturn(orderId string, express Express) (error)
-	ConfirmReturn(orderId string) (error)
-	ApplyCancelFromChain(chainId string, result string) (error)
+	Sell(sellInfo Order) error
+	StopSelling(orderId string) error
+	Buy(orderId string, buyInfo BuyInfo) error
+	ApplyConfirmFromChain(chainId string, result string) error
+	ShipProduct(orderId string, express Express) error
+	ConfirmOrder(orderId string) error
+	AskForReturn(orderId string, returnInfo ReturnInfo) error
+	AgreeReturn(orderId string) error
+	ShipReturn(orderId string, express Express) error
+	ConfirmReturn(orderId string) error
+	ApplyCancelFromChain(chainId string, result string) error
+	HealthCheck() bool
 }
 
 // OrderService for order service
 type OrderService struct {
-	Host        string
-	Port        string
 	Session     *mgo.Session
 	Logger      log.Logger
 	ProductsURL string
 }
 
 // NewUserSVC create a new user service
-func NewOrderSVC(host, port string, logger log.Logger, session *mgo.Session, productsURL string) *OrderService {
-	return &OrderService{Host: host, Port: port, Logger: logger, Session: session, ProductsURL: productsURL}
+func NewOrderSVC(logger log.Logger, session *mgo.Session, productsURL string) Service {
+	return &OrderService{Logger: logger, Session: session, ProductsURL: productsURL}
 }
 
 func (svc *OrderService) GetOrdersInTransaction() ([]Order, error) {
@@ -122,7 +123,7 @@ func (svc *OrderService) GetOrdersInTransaction() ([]Order, error) {
 func (svc *OrderService) GetOrderByProductId(productId string) (Order, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	c := session.DB("store").C("orders")
 
 	var order Order
@@ -140,7 +141,7 @@ func (svc *OrderService) GetOrderByProductId(productId string) (Order, error) {
 	return order, nil
 }
 
-func (svc *OrderService) Sell(sellInfo Order) (error) {
+func (svc *OrderService) Sell(sellInfo Order) error {
 	level.Debug(svc.Logger).Log("Input", "productId", "value", sellInfo.Product.Id)
 	if sellInfo.Product.PriceType == strconv.Itoa(NSUtil.OnlyShow) {
 		level.Error(svc.Logger).Log("PriceType", sellInfo.Product.PriceType, "Info", "can't be sold")
@@ -149,7 +150,7 @@ func (svc *OrderService) Sell(sellInfo Order) (error) {
 
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	c := session.DB("store").C("orders")
 	var order Order
 	err := c.Find(bson.M{"product.id": sellInfo.Product.Id}).One(&order)
@@ -163,7 +164,7 @@ func (svc *OrderService) Sell(sellInfo Order) (error) {
 	sellInfo.ServerStartTime = time.Now()
 	inputDuration := maxDuration
 	if sellInfo.Duration != "" {
-		inputDuration,err = strconv.Atoi(sellInfo.Duration)
+		inputDuration, err = strconv.Atoi(sellInfo.Duration)
 		if err != nil {
 			level.Error(svc.Logger).Log("API", "Atoi", "Error", err)
 			return errors.New("Please set right duration")
@@ -179,15 +180,15 @@ func (svc *OrderService) Sell(sellInfo Order) (error) {
 	}
 
 	// sending message to chain
-	proTypeString , _ := strconv.Atoi(sellInfo.Product.Type)
+	proTypeString, _ := strconv.Atoi(sellInfo.Product.Type)
 	ChainService.StartToSell(sellInfo.ChainId, sellInfo.Product.PriceValue, proTypeString)
 
 	return nil
 }
 
-func (svc *OrderService) StopSelling(orderId string) (error) {
+func (svc *OrderService) StopSelling(orderId string) error {
 	level.Debug(svc.Logger).Log("Input", "orderId", "Value", orderId)
-	order,err := svc.getOrderById(orderId)
+	order, err := svc.getOrderById(orderId)
 	if err != nil {
 		level.Error(svc.Logger).Log("API", "getOrderById", "Error", err)
 		return errors.New(generalErrorInfo)
@@ -196,7 +197,7 @@ func (svc *OrderService) StopSelling(orderId string) (error) {
 	return svc.stopSelling(order)
 }
 
-func (svc *OrderService) stopSelling(order Order) (error ){
+func (svc *OrderService) stopSelling(order Order) error {
 	level.Debug(svc.Logger).Log("Input", "orderId", "Value", order.ID)
 	if order.Status != strconv.Itoa(NSUtil.None) {
 		level.Error(svc.Logger).Log("Status", order.Status, "Info", "can't be stopped now")
@@ -213,10 +214,10 @@ func (svc *OrderService) stopSelling(order Order) (error ){
 	return nil
 }
 
-func (svc *OrderService) Buy(orderId string, buyInfo BuyInfo) (error) {
+func (svc *OrderService) Buy(orderId string, buyInfo BuyInfo) error {
 	level.Debug(svc.Logger).Log("Input", "orderId", "Value", orderId)
 	// get current order
-	order,err := svc.getOrderById(orderId)
+	order, err := svc.getOrderById(orderId)
 	if err != nil {
 		level.Error(svc.Logger).Log("API", "getOrderById", "Error", err)
 		return errors.New(generalErrorInfo)
@@ -224,20 +225,20 @@ func (svc *OrderService) Buy(orderId string, buyInfo BuyInfo) (error) {
 
 	// if the product can be bought
 	if order.Product.PriceType == strconv.Itoa(NSUtil.Fix) {
-		// bought by others 
+		// bought by others
 		if order.Status != strconv.Itoa(NSUtil.None) {
 			level.Error(svc.Logger).Log("Status", order.Status, "Info", "can't be bought")
-			return errors.New("The product has been sold. Please try the others.")
+			return errors.New("The product has been sold. Please try the others")
 		}
 	} else if order.Product.PriceType == strconv.Itoa(NSUtil.Auction) {
-		if order.Status != strconv.Itoa(NSUtil.None) && 
-		   order.Status != strconv.Itoa(NSUtil.InAuction) {
+		if order.Status != strconv.Itoa(NSUtil.None) &&
+			order.Status != strconv.Itoa(NSUtil.InAuction) {
 			level.Error(svc.Logger).Log("Status", order.Status, "Info", "can't be bought")
-			return errors.New("The product has been sold. Please try the others.")
+			return errors.New("The product has been sold. Please try the others")
 		}
 	} else {
 		level.Error(svc.Logger).Log("PriceType", order.Product.PriceType, "Info", "isn't supported now")
-		return errors.New("The product can't be bought. Please try the others.")
+		return errors.New("The product can't be bought. Please try the others")
 	}
 
 	// get current status and send message to chain if necessary
@@ -265,27 +266,26 @@ func (svc *OrderService) Buy(orderId string, buyInfo BuyInfo) (error) {
 		}
 	} else {
 		level.Error(svc.Logger).Log("PriceType", "Chain.UpdatePrice", "Info", err)
-		return errors.New("The product can't be bought. Please try the others.")
+		return errors.New("The product can't be bought. Please try the others")
 	}
 
 	// update order info
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	c := session.DB("store").C("orders")
 	buyInfo.ServerStartTime = time.Now()
 	updateData := bson.M{"buyinfo": buyInfo,
-						 "status": updateStatus}
+		"status": updateStatus}
 	err = c.Update(bson.M{"id": orderId}, bson.M{"$set": updateData})
 	if err != nil {
 		level.Error(svc.Logger).Log("API", "Date.Update", "Info", err)
 		return errors.New(generalErrorInfo)
 	}
 
-
 	if testDev {
 		if order.Product.PriceType == strconv.Itoa(NSUtil.Fix) {
-			svc.ApplyConfirmFromChain(orderId, "success");
+			svc.ApplyConfirmFromChain(orderId, "success")
 		}
 	}
 
@@ -293,7 +293,7 @@ func (svc *OrderService) Buy(orderId string, buyInfo BuyInfo) (error) {
 }
 
 // transaction is successful
-func (svc *OrderService) ApplyConfirmFromChain(chainId string, result string) (error) {
+func (svc *OrderService) ApplyConfirmFromChain(chainId string, result string) error {
 	// get order
 	order, err := svc.getOrderById(chainId)
 	//order, err := svc.getOrderByChainId(chainId)
@@ -353,7 +353,7 @@ func (svc *OrderService) ApplyConfirmFromChain(chainId string, result string) (e
 
 	// close the order
 	err = svc.closeOrder(order)
-	if (err != nil) {
+	if err != nil {
 		level.Error(svc.Logger).Log("API", "closeOrder", "Info", err)
 		return errors.New(generalErrorInfo)
 	} else {
@@ -369,7 +369,7 @@ func (svc *OrderService) ApplyConfirmFromChain(chainId string, result string) (e
 func (svc *OrderService) getOrderByChainId(chainId string) (Order, error) {
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	c := session.DB("store").C("orders")
 
 	var order Order
@@ -382,7 +382,7 @@ func (svc *OrderService) getOrderByChainId(chainId string) (Order, error) {
 	return order, nil
 }
 
-func (svc *OrderService) OrderIsDue(orderId string) (error) {
+func (svc *OrderService) OrderIsDue(orderId string) error {
 	level.Debug(svc.Logger).Log("Input", "orderId", "Value", orderId)
 	order, err := svc.getOrderById(orderId)
 	if err != nil {
@@ -403,11 +403,11 @@ func (svc *OrderService) OrderIsDue(orderId string) (error) {
 	return nil
 }
 
-func (svc *OrderService) auctionIsDue(order Order) (error) {
+func (svc *OrderService) auctionIsDue(order Order) error {
 	if order.Product.Type == strconv.Itoa(NSUtil.Digit) {
 		return ChainService.ConfirmOrder(order.ChainId)
 	} else if order.Product.Type == strconv.Itoa(NSUtil.Entity) {
-		err := svc.updateOrderStatus(order.ID, NSUtil.Unshipped);
+		err := svc.updateOrderStatus(order.ID, NSUtil.Unshipped)
 		if err != nil {
 			level.Error(svc.Logger).Log("API", "updateOrderStatus", "Info", err)
 			return errors.New("Failed to stop auction")
@@ -420,7 +420,7 @@ func (svc *OrderService) auctionIsDue(order Order) (error) {
 	return nil
 }
 
-func (svc *OrderService) ShipProduct(orderId string, express Express) (error) {
+func (svc *OrderService) ShipProduct(orderId string, express Express) error {
 	order, err := svc.getOrderById(orderId)
 	if err != nil {
 		level.Error(svc.Logger).Log("API", "getOrderById", "Info", err)
@@ -429,12 +429,12 @@ func (svc *OrderService) ShipProduct(orderId string, express Express) (error) {
 
 	if order.Status != strconv.Itoa(NSUtil.Unshipped) {
 		level.Error(svc.Logger).Log("Status", order.Status, "Info", "can't be shipped")
-		return errors.New("Current operation isn't supported. Please check order's status.")
+		return errors.New("Current operation isn't supported. Please check order's status")
 	}
 
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	express.StartTime = time.Now()
 	updateData := bson.M{"express": express, "status": strconv.Itoa(NSUtil.Dispatched)}
 	c := session.DB("store").C("orders")
@@ -447,13 +447,13 @@ func (svc *OrderService) ShipProduct(orderId string, express Express) (error) {
 	return nil
 }
 
-func (svc *OrderService) getExpressUrl(express Express) (string) {
+func (svc *OrderService) getExpressUrl(express Express) string {
 	// TODO: get link for the express
 	var tempValue = express.Company + ":" + express.Number
 	return tempValue
 }
 
-func (svc *OrderService) ConfirmOrder(orderId string) (error) {
+func (svc *OrderService) ConfirmOrder(orderId string) error {
 	level.Debug(svc.Logger).Log("Input", "orderId", "Value", orderId)
 	order, err := svc.getOrderById(orderId)
 	if err != nil {
@@ -463,10 +463,10 @@ func (svc *OrderService) ConfirmOrder(orderId string) (error) {
 
 	if order.Status != strconv.Itoa(NSUtil.Dispatched) {
 		level.Error(svc.Logger).Log("Status", order.Status, "Info", "can't be confirmed")
-		return errors.New("Current operation isn't supported. Please check order's status.")
+		return errors.New("Current operation isn't supported. Please check order's status")
 	}
 
-	err = svc.updateOrderStatus(orderId, NSUtil.DispatchConfirmed);
+	err = svc.updateOrderStatus(orderId, NSUtil.DispatchConfirmed)
 	if err != nil {
 		level.Error(svc.Logger).Log("API", "updateOrderStatus", "Info", err)
 		return errors.New(generalErrorInfo)
@@ -476,14 +476,14 @@ func (svc *OrderService) ConfirmOrder(orderId string) (error) {
 
 	if testDev {
 		if order.Product.PriceType == strconv.Itoa(NSUtil.Fix) {
-			svc.ApplyConfirmFromChain(orderId, "success");
+			svc.ApplyConfirmFromChain(orderId, "success")
 		}
 	}
-	
+
 	return nil
 }
 
-func (svc *OrderService) AskForReturn(orderId string, returnInfo ReturnInfo) (error) {
+func (svc *OrderService) AskForReturn(orderId string, returnInfo ReturnInfo) error {
 	level.Debug(svc.Logger).Log("Input", "orderId", "Value", orderId)
 	order, err := svc.getOrderById(orderId)
 	if err != nil {
@@ -493,12 +493,12 @@ func (svc *OrderService) AskForReturn(orderId string, returnInfo ReturnInfo) (er
 
 	if order.Status != strconv.Itoa(NSUtil.Dispatched) {
 		level.Error(svc.Logger).Log("Status", order.Status, "Info", "can't be returned")
-		return errors.New("Current operation isn't supported. Please check order's status.")
+		return errors.New("Current operation isn't supported. Please check order's status")
 	}
 
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	askStartTime := time.Now()
 	savedReturnInfo := svc.convertReturnInfo(order.BuyInfo.Buyer, returnInfo)
 	savedReturnInfo.AskTime = askStartTime
@@ -513,8 +513,8 @@ func (svc *OrderService) AskForReturn(orderId string, returnInfo ReturnInfo) (er
 	return nil
 }
 
-// save returninfo's image from data to a file 
-func (svc *OrderService) convertReturnInfo(buyer string, returnInfo ReturnInfo) (ReturnInfo) {
+// save returninfo's image from data to a file
+func (svc *OrderService) convertReturnInfo(buyer string, returnInfo ReturnInfo) ReturnInfo {
 	var savedReturnInfo = ReturnInfo{Description: returnInfo.Description}
 	for index, pic := range returnInfo.Images {
 		picID := NSUtil.UniqueID()
@@ -529,7 +529,7 @@ func (svc *OrderService) convertReturnInfo(buyer string, returnInfo ReturnInfo) 
 	return savedReturnInfo
 }
 
-func (svc *OrderService) AgreeReturn(orderId string) (error) {
+func (svc *OrderService) AgreeReturn(orderId string) error {
 	level.Debug(svc.Logger).Log("Input", "orderId", "Value", orderId)
 	order, err := svc.getOrderById(orderId)
 	if err != nil {
@@ -539,12 +539,12 @@ func (svc *OrderService) AgreeReturn(orderId string) (error) {
 
 	if order.Status != strconv.Itoa(NSUtil.ReturnInAgree) {
 		level.Error(svc.Logger).Log("Status", order.Status, "Info", "can't be agreed")
-		return errors.New("Current operation isn't supported. Please check order's status.")
+		return errors.New("Current operation isn't supported. Please check order's status")
 	}
 
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	returnInfo := order.ReturnInfo
 	returnInfo.AgreeTime = time.Now()
 	updateData := bson.M{"returninfo": returnInfo, "status": strconv.Itoa(NSUtil.ReturnAgreed)}
@@ -558,7 +558,7 @@ func (svc *OrderService) AgreeReturn(orderId string) (error) {
 	return nil
 }
 
-func (svc *OrderService) ShipReturn(orderId string, express Express) (error) {
+func (svc *OrderService) ShipReturn(orderId string, express Express) error {
 	level.Debug(svc.Logger).Log("Input", "orderId", "Value", orderId)
 	order, err := svc.getOrderById(orderId)
 	if err != nil {
@@ -568,12 +568,12 @@ func (svc *OrderService) ShipReturn(orderId string, express Express) (error) {
 
 	if order.Status != strconv.Itoa(NSUtil.ReturnAgreed) {
 		level.Error(svc.Logger).Log("Status", order.Status, "Info", "can't be shipped")
-		return errors.New("Current operation isn't supported. Please check order's status.")
+		return errors.New("Current operation isn't supported. Please check order's status")
 	}
 
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	returnInfo := order.ReturnInfo
 	returnInfo.Express = express
 	returnInfo.Express.StartTime = time.Now()
@@ -588,7 +588,7 @@ func (svc *OrderService) ShipReturn(orderId string, express Express) (error) {
 	return nil
 }
 
-func (svc *OrderService) ConfirmReturn(orderId string) (error) {
+func (svc *OrderService) ConfirmReturn(orderId string) error {
 	level.Debug(svc.Logger).Log("Input", "orderId", "Value", orderId)
 	order, err := svc.getOrderById(orderId)
 	if err != nil {
@@ -598,7 +598,7 @@ func (svc *OrderService) ConfirmReturn(orderId string) (error) {
 
 	if order.Status != strconv.Itoa(NSUtil.ReturnDispatched) {
 		level.Error(svc.Logger).Log("Status", order.Status, "Info", "can't be confirmed")
-		return errors.New("Current operation isn't supported. Please check order's status.")
+		return errors.New("Current operation isn't supported. Please check order's status")
 	}
 
 	ChainService.CancelOrder(order.ChainId)
@@ -606,7 +606,7 @@ func (svc *OrderService) ConfirmReturn(orderId string) (error) {
 	// update data in database
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	returnInfo := order.ReturnInfo
 	returnInfo.ConfirmTime = time.Now()
 	updateData := bson.M{"returninfo": returnInfo, "status": strconv.Itoa(NSUtil.ReturnConfirmed)}
@@ -619,14 +619,14 @@ func (svc *OrderService) ConfirmReturn(orderId string) (error) {
 
 	if testDev {
 		if order.Product.PriceType == strconv.Itoa(NSUtil.Fix) {
-			svc.ApplyCancelFromChain(orderId, "success");
+			svc.ApplyCancelFromChain(orderId, "success")
 		}
 	}
 
 	return nil
 }
 
-func (svc *OrderService) ApplyCancelFromChain(chainId string, result string) (error) {
+func (svc *OrderService) ApplyCancelFromChain(chainId string, result string) error {
 	level.Debug(svc.Logger).Log("Input", "chainId", "Value", chainId)
 	order, err := svc.getOrderById(chainId)
 	//order, err := svc.getOrderByChainId(chainId)
@@ -637,7 +637,7 @@ func (svc *OrderService) ApplyCancelFromChain(chainId string, result string) (er
 
 	if order.Status != strconv.Itoa(NSUtil.ReturnConfirmed) {
 		level.Error(svc.Logger).Log("Status", order.Status, "Info", "can't be cancelled")
-		return errors.New("Current operation isn't supported. Please check order's status.")
+		return errors.New("Current operation isn't supported. Please check order's status")
 	}
 
 	if result != "success" {
@@ -646,7 +646,7 @@ func (svc *OrderService) ApplyCancelFromChain(chainId string, result string) (er
 
 	order.Status = strconv.Itoa(NSUtil.ReturnCompleted)
 	err = svc.closeOrder(order)
-	if (err != nil) {
+	if err != nil {
 		level.Error(svc.Logger).Log("API", "closeOrder", "Info", err)
 		return errors.New(generalErrorInfo)
 	}
@@ -654,11 +654,11 @@ func (svc *OrderService) ApplyCancelFromChain(chainId string, result string) (er
 	return nil
 }
 
-func (svc *OrderService) updateOrderStatus(orderId string, orderStatus int) (error) {
+func (svc *OrderService) updateOrderStatus(orderId string, orderStatus int) error {
 	session := svc.Session.Copy()
 	defer session.Close()
-	
-	var currentStatus = strconv.Itoa(orderStatus);
+
+	var currentStatus = strconv.Itoa(orderStatus)
 	c := session.DB("store").C("orders")
 	err := c.Update(bson.M{"id": orderId}, bson.M{"$set": bson.M{"status": currentStatus}})
 	if err != nil {
@@ -670,11 +670,11 @@ func (svc *OrderService) updateOrderStatus(orderId string, orderStatus int) (err
 }
 
 // move the order to closed collection
-func (svc *OrderService) closeOrder(order Order) (error) {
+func (svc *OrderService) closeOrder(order Order) error {
 	level.Debug(svc.Logger).Log("func", "closeOrder")
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	order.CompleteTime = time.Now()
 
 	c := session.DB("store").C("closedorders")
@@ -683,7 +683,7 @@ func (svc *OrderService) closeOrder(order Order) (error) {
 		level.Error(svc.Logger).Log("API", "Data.Insert", "Info", err)
 		return errors.New("Failed to close the order")
 	} else {
-		err = svc.deleteOrder(order.ID);
+		err = svc.deleteOrder(order.ID)
 		if err != nil {
 			return errors.New("Failed to delete completed order")
 		}
@@ -696,7 +696,7 @@ func (svc *OrderService) GetOrders(buyer string) ([]Order, error) {
 	level.Debug(svc.Logger).Log("Input", "buyer", "Value", buyer)
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	c := session.DB("store").C("orders")
 
 	var orders []Order
@@ -713,7 +713,7 @@ func (svc *OrderService) GetSellings(seller string) ([]Order, error) {
 	level.Debug(svc.Logger).Log("Input", "seller", "Value", seller)
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	c := session.DB("store").C("orders")
 
 	var orders []Order
@@ -730,7 +730,7 @@ func (svc *OrderService) getOrderById(orderId string) (Order, error) {
 	level.Debug(svc.Logger).Log("Func", "getOrderById")
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	c := session.DB("store").C("orders")
 
 	var order Order
@@ -743,11 +743,11 @@ func (svc *OrderService) getOrderById(orderId string) (Order, error) {
 	return order, nil
 }
 
-func (svc *OrderService) deleteOrder(orderId string) (error) {
+func (svc *OrderService) deleteOrder(orderId string) error {
 	level.Debug(svc.Logger).Log("Func", "deleteOrder")
 	session := svc.Session.Copy()
 	defer session.Close()
-	
+
 	c := session.DB("store").C("orders")
 
 	err := c.Remove(bson.M{"id": orderId})
@@ -759,7 +759,7 @@ func (svc *OrderService) deleteOrder(orderId string) (error) {
 	return nil
 }
 
-func (svc *OrderService) updateProductAfterTransaction(productId string, newOwner string, price string) (error) {
+func (svc *OrderService) updateProductAfterTransaction(productId string, newOwner string, price string) error {
 	updateData := NSUtil.TransactionUpdateData{}
 	updateData.Owner = newOwner
 	updateData.Price = price
@@ -784,4 +784,8 @@ func (svc *OrderService) updateProductAfterTransaction(productId string, newOwne
 	}
 
 	return nil
+}
+
+func (svc *OrderService) HealthCheck() bool {
+	return true
 }

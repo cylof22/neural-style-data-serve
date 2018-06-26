@@ -1,13 +1,14 @@
-package OrderService
+package main
 
 import (
 	"time"
+
 	"github.com/go-kit/kit/log"
 )
 
 type orderService struct {
-	logger       log.Logger
-	dataService  Service
+	logger      log.Logger
+	dataService Service
 }
 
 // NewLoggingService returns a new instance of a products logging Service.
@@ -15,7 +16,7 @@ func NewLoggingService(logger log.Logger, s Service) Service {
 	return &orderService{logger, s}
 }
 
-func (svc *orderService) GetOrdersInTransaction() (orders []Order, err error){
+func (svc *orderService) GetOrdersInTransaction() (orders []Order, err error) {
 	defer func(begin time.Time) {
 		svc.logger.Log("method", "GetOrdersInTransaction", "took", time.Since(begin), "err", err)
 	}(time.Now())
@@ -23,7 +24,7 @@ func (svc *orderService) GetOrdersInTransaction() (orders []Order, err error){
 	return svc.dataService.GetOrdersInTransaction()
 }
 
-func (svc *orderService) GetOrders(buyer string) (orders []Order, err error){
+func (svc *orderService) GetOrders(buyer string) (orders []Order, err error) {
 	defer func(begin time.Time) {
 		svc.logger.Log("method", "GetOrders", "buyer", buyer, "took", time.Since(begin), "err", err)
 	}(time.Now())
@@ -133,4 +134,12 @@ func (svc *orderService) ApplyCancelFromChain(chainId string, result string) (er
 	}(time.Now())
 
 	return svc.dataService.ApplyCancelFromChain(chainId, result)
+}
+
+func (svc *orderService) HealthCheck() bool {
+	defer func(begin time.Time) {
+		svc.logger.Log("method", "HealthCheck", "took", time.Since(begin))
+	}(time.Now())
+
+	return svc.dataService.HealthCheck()
 }

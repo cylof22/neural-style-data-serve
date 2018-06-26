@@ -9,8 +9,6 @@ import (
 
 	"neural-style-transfer"
 
-	"neural-style-order"
-	
 	"github.com/go-kit/kit/log"
 	consulsd "github.com/go-kit/kit/sd/consul"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -25,6 +23,8 @@ const (
 	userServiceTag      = "v1"
 	productsServiceName = "products"
 	productsServiceTag  = "v1"
+	orderServiceName    = "orders"
+	orderServiceTag     = "v1"
 )
 
 func makeHTTPHandler(ctx context.Context, client consulsd.Client, dbSession *mgo.Session, logger log.Logger) http.Handler {
@@ -41,12 +41,9 @@ func makeHTTPHandler(ctx context.Context, client consulsd.Client, dbSession *mgo
 		*outputPath, *serverURL, *serverPort)
 	r = StyleService.MakeHTTPHandler(ctx, r, authMiddleware, styleTransferService, options...)
 
-	// Order service
-	productsURL := "http://" + *serverURL + ":" + *serverPort + *productsRouter
-	var orders OrderService.Service
-	orders = OrderService.NewOrderSVC(*serverURL, *serverPort, logger, dbSession, productsURL)
-	orders = OrderService.NewLoggingService(log.With(logger, "component", "order"), orders)
-	r = OrderService.MakeHTTPHandler(ctx, r, authMiddleware, orders, options...)
+	// images for explaining return
+	returnFiles := http.FileServer(http.Dir("data/returns"))
+	r.PathPrefix("/returns/").Handler(http.StripPrefix("/returns/", returnFiles))
 
 	// portraits file server
 	portraitsFiles := http.FileServer(http.Dir("data/portraits"))
@@ -75,6 +72,53 @@ func makeHTTPHandler(ctx context.Context, client consulsd.Client, dbSession *mgo
 	r.Path("/").Handler(resourceFile)
 
 	duration := 500 * time.Millisecond
+
+	// Add API gateway for Order service
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "GET",
+		"/api/v1/transactionorders", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "GET",
+		"/api/v1/orders/{username}", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "GET",
+		"/api/v1/sellings/{username}", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "GET",
+		"/api/v1/order", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "POST",
+		"/api/v1/order/create", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "GET",
+		"/api/v1/orders/{id}/delete", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "POST",
+		"/api/v1/orders/{id}/buy", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "POST",
+		"/api/v1/orders/{chainId}/chainconfirm", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "POST",
+		"/api/v1/orders/{id}/productship", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "GET",
+		"/api/v1/orders/{id}/confirm", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "POST",
+		"/api/v1/orders/{id}/askreturn", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "POST",
+		"/api/v1/orders/{id}/returnship", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "GET",
+		"/api/v1/orders/{id}/returnagreed", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "GET",
+		"/api/v1/orders/{id}/returnconfirmed", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, orderServiceName, orderServiceTag, "POST",
+		"/api/v1/orders/{chainId}/chaincancel", duration, 3)
+
 	// Add API gateway for Social Service
 	r = NSUtil.RegisterSDService(ctx, r, client, logger, socialServiceName, socialServiceTag, "GET",
 		"/api/social/v1/{id}/reviews", duration, 3)
