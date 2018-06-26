@@ -6,11 +6,7 @@ import (
 	"neural-style-util"
 	"time"
 
-	"neural-style-user"
-
 	"neural-style-transfer"
-
-	"neural-style-order"
 
 	"github.com/go-kit/kit/log"
 	consulsd "github.com/go-kit/kit/sd/consul"
@@ -33,18 +29,16 @@ func makeHTTPHandler(ctx context.Context, client consulsd.Client, dbSession *mgo
 		*outputPath, *serverURL, *serverPort)
 	r = StyleService.MakeHTTPHandler(ctx, r, authMiddleware, styleTransferService, options...)
 
-	// User service
-	var users UserService.Service
-	users = UserService.NewUserSVC(*serverURL, *serverPort, logger, dbSession)
-	users = UserService.NewLoggingService(log.With(logger, "component", "user"), users)
-	r = UserService.MakeHTTPHandler(ctx, r, authMiddleware, users, options...)
-
 	// Order service
 	productsURL := "http://" + *serverURL + ":" + *serverPort + *productsRouter
 	var orders OrderService.Service
 	orders = OrderService.NewOrderSVC(*serverURL, *serverPort, logger, dbSession, productsURL)
 	orders = OrderService.NewLoggingService(log.With(logger, "component", "order"), orders)
 	r = OrderService.MakeHTTPHandler(ctx, r, authMiddleware, orders, options...)
+
+	// portraits file server
+	portraitsFiles := http.FileServer(http.Dir("data/portraits"))
+	r.PathPrefix("/portraits/").Handler(http.StripPrefix("/portraits/", portraitsFiles))
 
 	// output file server
 	outputFiles := http.FileServer(http.Dir("data/outputs/"))
@@ -69,6 +63,20 @@ func makeHTTPHandler(ctx context.Context, client consulsd.Client, dbSession *mgo
 	r.Path("/").Handler(resourceFile)
 
 	duration := 500 * time.Millisecond
+
+	// Add API gateway for user service
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "users", "v1", "GET",
+		"/api/v1/register", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "users", "v1", "POST",
+		"/api/v1/authenticate", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "users", "v1", "GET",
+		"/api/v1/users/{username}", duration, 3)
+
+	r = NSUtil.RegisterSDService(ctx, r, client, logger, "users", "v1", "POST",
+		"/api/v1/users/{username}/update", duration, 3)
+
 	// Add API gateway for proudct Service
 	r = NSUtil.RegisterSDService(ctx, r, client, logger, "products", "v1", "POST",
 		"/api/upload/style", 4*duration, 3)
