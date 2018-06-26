@@ -7,13 +7,9 @@ import (
 
 	"neural-style-util"
 
-	"neural-style-transfer"
-
 	"github.com/go-kit/kit/log"
 	consulsd "github.com/go-kit/kit/sd/consul"
-	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-	mgo "gopkg.in/mgo.v2"
 )
 
 const (
@@ -27,19 +23,8 @@ const (
 	orderServiceTag     = "v1"
 )
 
-func makeHTTPHandler(ctx context.Context, client consulsd.Client, dbSession *mgo.Session, logger log.Logger) http.Handler {
+func makeHTTPHandler(ctx context.Context, client consulsd.Client, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
-	options := []httptransport.ServerOption{
-		httptransport.ServerErrorLogger(logger),
-		httptransport.ServerErrorEncoder(NSUtil.EncodeError),
-		httptransport.ServerBefore(NSUtil.ParseToken),
-	}
-
-	authMiddleware := NSUtil.AuthMiddleware(logger)
-	// Style Service
-	styleTransferService := StyleService.NewNeuralTransferSVC(*networkPath, *previewNetworkPath,
-		*outputPath, *serverURL, *serverPort)
-	r = StyleService.MakeHTTPHandler(ctx, r, authMiddleware, styleTransferService, options...)
 
 	// images for explaining return
 	returnFiles := http.FileServer(http.Dir("data/returns"))

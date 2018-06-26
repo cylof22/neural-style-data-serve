@@ -14,76 +14,19 @@ import (
 	"github.com/go-kit/kit/log/level"
 	consulsd "github.com/go-kit/kit/sd/consul"
 	"github.com/hashicorp/consul/api"
-	mgo "gopkg.in/mgo.v2"
 )
 
 var (
-	serverURL               = flag.String("host", "0.0.0.0", "neural style server url")
-	serverPort              = flag.String("port", "8000", "neural style server port")
-	dbServerURL             = flag.String("dbserver", "0.0.0.0", "style products server url")
-	dbServerPort            = flag.String("dbport", "9000", "style products port url")
-	storageServerURL        = flag.String("storageURL", "0.0.0.0", "Storage Server URL")
-	storageServerPort       = flag.String("storagePort", "5000", "Storage Server Port")
-	storageServerSaveRouter = flag.String("saveRouter", "/api/v1/storage/save", "URL router for save")
-	storageServerFindRouter = flag.String("findRouter", "/api/v1/storage/find", "URL router for find")
-	cacheServer             = flag.String("cacheHost", "www.elforce.net", "memcached host")
-	cacheGetRouter          = flag.String("cacheGetURL", "/api/v1/cache/get", "Cache Get Router")
-	localDev                = flag.Bool("local", false, "Disable Cloud Storage and local Memcached")
-	networkPath             = flag.String("network", "", "neural network model path")
-	previewNetworkPath      = flag.String("previewNetwork", "", "neural network preview model path")
-	outputPath              = flag.String("outputdir", "./", "neural style transfer output directory")
-	productsRouter          = flag.String("productsRouter", "/api/products", "URL router for products")
-	consulAddr              = flag.String("consul.addr", "localhost", "consul address")
-	consulPort              = flag.String("consul.port", "8500", "consul port")
+	serverPort = flag.String("port", "8000", "neural style server port")
+	consulAddr = flag.String("consul.addr", "localhost", "consul address")
+	consulPort = flag.String("consul.port", "8500", "consul port")
 )
-
-func ensureIndex(s *mgo.Session) {
-	session := s.Copy()
-	defer session.Close()
-
-	products := session.DB("store").C("products")
-
-	index := mgo.Index{
-		Key:        []string{"id"},
-		Unique:     true,
-		DropDups:   true,
-		Background: true,
-		Sparse:     true,
-	}
-	err := products.EnsureIndex(index)
-	if err != nil {
-		panic(err)
-	}
-
-	orders := session.DB("store").C("orders")
-	index = mgo.Index{
-		Key:        []string{"productId"},
-		Unique:     true,
-		DropDups:   true,
-		Background: true,
-		Sparse:     true,
-	}
-	err = orders.EnsureIndex(index)
-	if err != nil {
-		panic(err)
-	}
-}
 
 func main() {
 	flag.Parse()
 
 	ctx := context.Background()
 	errChan := make(chan error)
-
-	session, err := mgo.Dial(*dbServerURL + ":" + *dbServerPort)
-	if err != nil {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-		errChan <- fmt.Errorf("%s", <-c)
-	}
-	defer session.Close()
-	session.SetMode(mgo.Monotonic, true)
-	ensureIndex(session)
 
 	// Logging domain.
 	var logger log.Logger
@@ -106,15 +49,15 @@ func main() {
 		client = consulsd.NewClient(consulClient)
 	}
 
-	r := makeHTTPHandler(ctx, client, session, logger)
+	r := makeHTTPHandler(ctx, client, logger)
 
 	// HTTP transport
 	go func() {
 		// How to show the debug info
-		level.Debug(logger).Log("info", "Start server at port "+*serverURL+":"+*serverPort,
+		level.Debug(logger).Log("info", "Start server at port "+"0.0.0.0"+":"+*serverPort,
 			"time", time.Now())
 		handler := r
-		errChan <- http.ListenAndServe(*serverURL+":"+*serverPort, handler)
+		errChan <- http.ListenAndServe("0.0.0.0"+":"+*serverPort, handler)
 	}()
 
 	go func() {
