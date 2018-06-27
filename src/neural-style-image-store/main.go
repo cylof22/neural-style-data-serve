@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -17,8 +20,10 @@ import (
 var (
 	serverURL    = flag.String("host", "0.0.0.0", "neural style server url")
 	serverPort   = flag.String("port", "5000", "neural style server port")
-	dbServerURL  = flag.String("dbserver", "0.0.0.0", "style products server url")
-	dbServerPort = flag.String("dbport", "9000", "style products port url")
+	dbServerURL  = flag.String("dbserver", "apc-chain.documents.azure.com", "Mongodb server host")
+	dbServerPort = flag.String("dbport", "10255", "Mongodb server port")
+	dbUser       = flag.String("dbUser", "", "Mongodb user")
+	dbKey        = flag.String("dbPassword", "", "Mongodb password")
 )
 
 func main() {
@@ -26,7 +31,22 @@ func main() {
 	errChan := make(chan error)
 
 	ctx := context.Background()
-	session, err := mgo.Dial(*dbServerURL + ":" + *dbServerPort)
+	dbAddr := *dbServerURL + ":" + *dbServerPort
+
+	dialInfo := &mgo.DialInfo{
+		Addrs:    []string{dbAddr},
+		Timeout:  10 * time.Second,
+		Database: "store",
+	}
+
+	dialInfo.Username = *dbUser
+	dialInfo.Password = *dbKey
+	dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
+		return tls.Dial("tcp", addr.String(), &tls.Config{})
+	}
+
+	session, err := mgo.DialWithInfo(dialInfo)
+
 	if err != nil {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)

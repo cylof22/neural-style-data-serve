@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,12 +16,18 @@ import (
 	"github.com/go-kit/kit/log/level"
 	consulsd "github.com/go-kit/kit/sd/consul"
 	"github.com/hashicorp/consul/api"
+	"github.com/rs/cors"
+	mgo "gopkg.in/mgo.v2"
 )
 
 var (
-	serverPort = flag.String("port", "8000", "neural style server port")
-	consulAddr = flag.String("consul.addr", "localhost", "consul address")
-	consulPort = flag.String("consul.port", "8500", "consul port")
+	serverPort   = flag.String("port", "8000", "neural style server port")
+	consulAddr   = flag.String("consul.addr", "localhost", "consul address")
+	consulPort   = flag.String("consul.port", "8500", "consul port")
+	dbServerURL  = flag.String("dbserver", "apc-chain.documents.azure.com", "Mongodb server host")
+	dbServerPort = flag.String("dbport", "10255", "Mongodb server port")
+	dbUser       = flag.String("dbUser", "", "Mongodb user")
+	dbKey        = flag.String("dbPassword", "", "Mongodb password")
 )
 
 func main() {
@@ -27,6 +35,29 @@ func main() {
 
 	ctx := context.Background()
 	errChan := make(chan error)
+
+	dbAddr := *dbServerURL + ":" + *dbServerPort
+
+	dialInfo := &mgo.DialInfo{
+		Addrs:    []string{dbAddr},
+		Timeout:  10 * time.Second,
+		Database: "store",
+	}
+
+	dialInfo.Username = *dbUser
+	dialInfo.Password = *dbKey
+	dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
+		return tls.Dial("tcp", addr.String(), &tls.Config{})
+	}
+
+	session, err := mgo.DialWithInfo(dialInfo)
+	if err != nil {
+		fmt.Println("Db connection fails: " + err.Error())
+		return
+	}
+
+	defer session.Close()
+	session.SetMode(mgo.Monotonic, true)
 
 	// Logging domain.
 	var logger log.Logger
@@ -50,7 +81,7 @@ func main() {
 	}
 
 	r := makeHTTPHandler(ctx, client, logger)
-
+	r = cors.AllowAll().Handler(r)
 	// HTTP transport
 	go func() {
 		// How to show the debug info
