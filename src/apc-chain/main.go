@@ -18,7 +18,7 @@ var (
 	dbServerPort = flag.String("dbport", "10255", "Mongodb server port")
 	dbUser       = flag.String("dbUser", "", "Mongodb user")
 	dbKey        = flag.String("dbPassword", "", "Mongodb password")
-	productSite  = flag.String("productSite", "", "product server site")
+	productSite  = flag.String("productSite", "http://168.63.151.222:8000", "product server site")
 	local        = flag.Bool("local", false, "flag for store local file")
 )
 
